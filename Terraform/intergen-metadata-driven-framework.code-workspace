@@ -1,0 +1,22 @@
+{
+	"folders": [
+		{
+			"path": "../../../../../Downloads/MDDF_New_Repo/intergen-metadata-driven-framework"
+		},
+		{
+			"name": "intergen-metadata-driven-framework",
+			"path": "../../../intergen-metadata-driven-framework"
+		},
+		{
+			"name": "intergen-metadata-driven-framework-1",
+			"path": "../.."
+		},
+		{
+			"name": "WS-DT-DataManagementPlatform",
+			"path": "../../../WS-DT-DataManagementPlatform/WS-DT-DataManagementPlatform"
+		}
+	],
+	"settings": {
+		"debug.internalConsoleOptions": "neverOpen"
+	}
+}

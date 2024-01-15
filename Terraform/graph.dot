@@ -1,0 +1,153 @@
+digraph {
+	compound = "true"
+	newrank = "true"
+	subgraph "root" {
+		"[root] azurerm_application_insights.AppInsights (expand)" [label = "azurerm_application_insights.AppInsights", shape = "box"]
+		"[root] azurerm_key_vault.KeyVault (expand)" [label = "azurerm_key_vault.KeyVault", shape = "box"]
+		"[root] azurerm_key_vault_access_policy.kv_policy (expand)" [label = "azurerm_key_vault_access_policy.kv_policy", shape = "box"]
+		"[root] azurerm_key_vault_secret.KeyVault_Secrets (expand)" [label = "azurerm_key_vault_secret.KeyVault_Secrets", shape = "box"]
+		"[root] azurerm_linux_function_app.FunctionApp (expand)" [label = "azurerm_linux_function_app.FunctionApp", shape = "box"]
+		"[root] azurerm_resource_group.resourcegroup (expand)" [label = "azurerm_resource_group.resourcegroup", shape = "box"]
+		"[root] azurerm_role_assignment.StorageRoleAss (expand)" [label = "azurerm_role_assignment.StorageRoleAss", shape = "box"]
+		"[root] azurerm_role_assignment.SynapseRoleAss (expand)" [label = "azurerm_role_assignment.SynapseRoleAss", shape = "box"]
+		"[root] azurerm_service_plan.ServicePlan (expand)" [label = "azurerm_service_plan.ServicePlan", shape = "box"]
+		"[root] azurerm_storage_account.storage (expand)" [label = "azurerm_storage_account.storage", shape = "box"]
+		"[root] azurerm_storage_container.storage_container (expand)" [label = "azurerm_storage_container.storage_container", shape = "box"]
+		"[root] azurerm_storage_data_lake_gen2_filesystem.adls (expand)" [label = "azurerm_storage_data_lake_gen2_filesystem.adls", shape = "box"]
+		"[root] azurerm_synapse_firewall_rule.devOpsIP (expand)" [label = "azurerm_synapse_firewall_rule.devOpsIP", shape = "box"]
+		"[root] azurerm_synapse_role_assignment.SynapseAdminRoleAss (expand)" [label = "azurerm_synapse_role_assignment.SynapseAdminRoleAss", shape = "box"]
+		"[root] azurerm_synapse_spark_pool.SynapseSpark (expand)" [label = "azurerm_synapse_spark_pool.SynapseSpark", shape = "box"]
+		"[root] azurerm_synapse_workspace.synapse (expand)" [label = "azurerm_synapse_workspace.synapse", shape = "box"]
+		"[root] data.azurerm_client_config.current (expand)" [label = "data.azurerm_client_config.current", shape = "box"]
+		"[root] null_resource.functions (expand)" [label = "null_resource.functions", shape = "box"]
+		"[root] null_resource.next (expand)" [label = "null_resource.next", shape = "box"]
+		"[root] null_resource.uploadfile (expand)" [label = "null_resource.uploadfile", shape = "box"]
+		"[root] output.account_id" [label = "output.account_id", shape = "note"]
+		"[root] output.object_id" [label = "output.object_id", shape = "note"]
+		"[root] output.rgname" [label = "output.rgname", shape = "note"]
+		"[root] output.tenant_id" [label = "output.tenant_id", shape = "note"]
+		"[root] provider[\"registry.terraform.io/hashicorp/azurerm\"]" [label = "provider[\"registry.terraform.io/hashicorp/azurerm\"]", shape = "diamond"]
+		"[root] provider[\"registry.terraform.io/hashicorp/null\"]" [label = "provider[\"registry.terraform.io/hashicorp/null\"]", shape = "diamond"]
+		"[root] provider[\"registry.terraform.io/hashicorp/time\"]" [label = "provider[\"registry.terraform.io/hashicorp/time\"]", shape = "diamond"]
+		"[root] time_sleep.wait_60_seconds (expand)" [label = "time_sleep.wait_60_seconds", shape = "box"]
+		"[root] var.FunctionApp_ConfigureEnable" [label = "var.FunctionApp_ConfigureEnable", shape = "note"]
+		"[root] var.FunctionApp_CreateEnable" [label = "var.FunctionApp_CreateEnable", shape = "note"]
+		"[root] var.FunctionApp_Name" [label = "var.FunctionApp_Name", shape = "note"]
+		"[root] var.KeyVault_Enable" [label = "var.KeyVault_Enable", shape = "note"]
+		"[root] var.KeyVault_Name" [label = "var.KeyVault_Name", shape = "note"]
+		"[root] var.ResouceGroup_Name" [label = "var.ResouceGroup_Name", shape = "note"]
+		"[root] var.ResourceGroup_Location" [label = "var.ResourceGroup_Location", shape = "note"]
+		"[root] var.StorageAccount_CuratedContainer" [label = "var.StorageAccount_CuratedContainer", shape = "note"]
+		"[root] var.StorageAccount_Enable" [label = "var.StorageAccount_Enable", shape = "note"]
+		"[root] var.StorageAccount_HierarchyEnable" [label = "var.StorageAccount_HierarchyEnable", shape = "note"]
+		"[root] var.StorageAccount_LandingContainer" [label = "var.StorageAccount_LandingContainer", shape = "note"]
+		"[root] var.StorageAccount_Name" [label = "var.StorageAccount_Name", shape = "note"]
+		"[root] var.StorageAccount_RawContainer" [label = "var.StorageAccount_RawContainer", shape = "note"]
+		"[root] var.StorageAccount_SKU" [label = "var.StorageAccount_SKU", shape = "note"]
+		"[root] var.StorageAccount_StagingContainer" [label = "var.StorageAccount_StagingContainer", shape = "note"]
+		"[root] var.Synapse_Enable" [label = "var.Synapse_Enable", shape = "note"]
+		"[root] var.Synapse_Name" [label = "var.Synapse_Name", shape = "note"]
+		"[root] var.Synapse_PoolName" [label = "var.Synapse_PoolName", shape = "note"]
+		"[root] var.Synapse_ServerlessDB" [label = "var.Synapse_ServerlessDB", shape = "note"]
+		"[root] var.Synapse_ShutDown_Time" [label = "var.Synapse_ShutDown_Time", shape = "note"]
+		"[root] var.Synapse_SqlAdministratorLogin" [label = "var.Synapse_SqlAdministratorLogin", shape = "note"]
+		"[root] var.azure_devops_repo" [label = "var.azure_devops_repo", shape = "note"]
+		"[root] var.secret_maps" [label = "var.secret_maps", shape = "note"]
+		"[root] var.tags" [label = "var.tags", shape = "note"]
+		"[root] azurerm_application_insights.AppInsights (expand)" -> "[root] azurerm_resource_group.resourcegroup (expand)"
+		"[root] azurerm_application_insights.AppInsights (expand)" -> "[root] var.FunctionApp_CreateEnable"
+		"[root] azurerm_key_vault.KeyVault (expand)" -> "[root] azurerm_resource_group.resourcegroup (expand)"
+		"[root] azurerm_key_vault.KeyVault (expand)" -> "[root] data.azurerm_client_config.current (expand)"
+		"[root] azurerm_key_vault.KeyVault (expand)" -> "[root] var.KeyVault_Enable"
+		"[root] azurerm_key_vault.KeyVault (expand)" -> "[root] var.KeyVault_Name"
+		"[root] azurerm_key_vault_access_policy.kv_policy (expand)" -> "[root] azurerm_key_vault.KeyVault (expand)"
+		"[root] azurerm_key_vault_access_policy.kv_policy (expand)" -> "[root] local.Admin_Object_IDs (expand)"
+		"[root] azurerm_key_vault_secret.KeyVault_Secrets (expand)" -> "[root] azurerm_key_vault.KeyVault (expand)"
+		"[root] azurerm_key_vault_secret.KeyVault_Secrets (expand)" -> "[root] var.secret_maps"
+		"[root] azurerm_linux_function_app.FunctionApp (expand)" -> "[root] azurerm_application_insights.AppInsights (expand)"
+		"[root] azurerm_linux_function_app.FunctionApp (expand)" -> "[root] azurerm_service_plan.ServicePlan (expand)"
+		"[root] azurerm_linux_function_app.FunctionApp (expand)" -> "[root] azurerm_storage_account.storage (expand)"
+		"[root] azurerm_linux_function_app.FunctionApp (expand)" -> "[root] var.KeyVault_Name"
+		"[root] azurerm_linux_function_app.FunctionApp (expand)" -> "[root] var.StorageAccount_CuratedContainer"
+		"[root] azurerm_linux_function_app.FunctionApp (expand)" -> "[root] var.StorageAccount_LandingContainer"
+		"[root] azurerm_linux_function_app.FunctionApp (expand)" -> "[root] var.StorageAccount_RawContainer"
+		"[root] azurerm_linux_function_app.FunctionApp (expand)" -> "[root] var.StorageAccount_StagingContainer"
+		"[root] azurerm_linux_function_app.FunctionApp (expand)" -> "[root] var.Synapse_Name"
+		"[root] azurerm_linux_function_app.FunctionApp (expand)" -> "[root] var.Synapse_PoolName"
+		"[root] azurerm_resource_group.resourcegroup (expand)" -> "[root] provider[\"registry.terraform.io/hashicorp/azurerm\"]"
+		"[root] azurerm_resource_group.resourcegroup (expand)" -> "[root] var.ResouceGroup_Name"
+		"[root] azurerm_resource_group.resourcegroup (expand)" -> "[root] var.ResourceGroup_Location"
+		"[root] azurerm_role_assignment.StorageRoleAss (expand)" -> "[root] local.Admin_Object_IDs (expand)"
+		"[root] azurerm_role_assignment.SynapseRoleAss (expand)" -> "[root] azurerm_synapse_workspace.synapse (expand)"
+		"[root] azurerm_role_assignment.SynapseRoleAss (expand)" -> "[root] local.Admin_Object_IDs (expand)"
+		"[root] azurerm_service_plan.ServicePlan (expand)" -> "[root] azurerm_resource_group.resourcegroup (expand)"
+		"[root] azurerm_service_plan.ServicePlan (expand)" -> "[root] var.FunctionApp_CreateEnable"
+		"[root] azurerm_service_plan.ServicePlan (expand)" -> "[root] var.FunctionApp_Name"
+		"[root] azurerm_storage_account.storage (expand)" -> "[root] azurerm_resource_group.resourcegroup (expand)"
+		"[root] azurerm_storage_account.storage (expand)" -> "[root] var.StorageAccount_Enable"
+		"[root] azurerm_storage_account.storage (expand)" -> "[root] var.StorageAccount_HierarchyEnable"
+		"[root] azurerm_storage_account.storage (expand)" -> "[root] var.StorageAccount_Name"
+		"[root] azurerm_storage_account.storage (expand)" -> "[root] var.StorageAccount_SKU"
+		"[root] azurerm_storage_account.storage (expand)" -> "[root] var.tags"
+		"[root] azurerm_storage_container.storage_container (expand)" -> "[root] azurerm_storage_account.storage (expand)"
+		"[root] azurerm_storage_container.storage_container (expand)" -> "[root] local.container_names (expand)"
+		"[root] azurerm_storage_data_lake_gen2_filesystem.adls (expand)" -> "[root] azurerm_storage_account.storage (expand)"
+		"[root] azurerm_synapse_firewall_rule.devOpsIP (expand)" -> "[root] azurerm_synapse_workspace.synapse (expand)"
+		"[root] azurerm_synapse_role_assignment.SynapseAdminRoleAss (expand)" -> "[root] azurerm_synapse_workspace.synapse (expand)"
+		"[root] azurerm_synapse_role_assignment.SynapseAdminRoleAss (expand)" -> "[root] local.Admin_Object_IDs (expand)"
+		"[root] azurerm_synapse_spark_pool.SynapseSpark (expand)" -> "[root] azurerm_synapse_workspace.synapse (expand)"
+		"[root] azurerm_synapse_spark_pool.SynapseSpark (expand)" -> "[root] var.Synapse_PoolName"
+		"[root] azurerm_synapse_spark_pool.SynapseSpark (expand)" -> "[root] var.Synapse_ShutDown_Time"
+		"[root] azurerm_synapse_workspace.synapse (expand)" -> "[root] azurerm_storage_data_lake_gen2_filesystem.adls (expand)"
+		"[root] azurerm_synapse_workspace.synapse (expand)" -> "[root] data.azurerm_client_config.current (expand)"
+		"[root] azurerm_synapse_workspace.synapse (expand)" -> "[root] var.Synapse_Enable"
+		"[root] azurerm_synapse_workspace.synapse (expand)" -> "[root] var.Synapse_Name"
+		"[root] azurerm_synapse_workspace.synapse (expand)" -> "[root] var.Synapse_SqlAdministratorLogin"
+		"[root] azurerm_synapse_workspace.synapse (expand)" -> "[root] var.azure_devops_repo"
+		"[root] azurerm_synapse_workspace.synapse (expand)" -> "[root] var.secret_maps"
+		"[root] data.azurerm_client_config.current (expand)" -> "[root] provider[\"registry.terraform.io/hashicorp/azurerm\"]"
+		"[root] local.Admin_Object_IDs (expand)" -> "[root] azurerm_linux_function_app.FunctionApp (expand)"
+		"[root] local.Admin_Object_IDs (expand)" -> "[root] data.azurerm_client_config.current (expand)"
+		"[root] local.container_names (expand)" -> "[root] var.StorageAccount_CuratedContainer"
+		"[root] local.container_names (expand)" -> "[root] var.StorageAccount_LandingContainer"
+		"[root] local.container_names (expand)" -> "[root] var.StorageAccount_RawContainer"
+		"[root] local.container_names (expand)" -> "[root] var.StorageAccount_StagingContainer"
+		"[root] null_resource.functions (expand)" -> "[root] azurerm_linux_function_app.FunctionApp (expand)"
+		"[root] null_resource.functions (expand)" -> "[root] provider[\"registry.terraform.io/hashicorp/null\"]"
+		"[root] null_resource.functions (expand)" -> "[root] var.FunctionApp_ConfigureEnable"
+		"[root] null_resource.next (expand)" -> "[root] provider[\"registry.terraform.io/hashicorp/null\"]"
+		"[root] null_resource.next (expand)" -> "[root] time_sleep.wait_60_seconds (expand)"
+		"[root] null_resource.uploadfile (expand)" -> "[root] azurerm_storage_account.storage (expand)"
+		"[root] null_resource.uploadfile (expand)" -> "[root] local.dirname (expand)"
+		"[root] null_resource.uploadfile (expand)" -> "[root] local.filesystemName (expand)"
+		"[root] null_resource.uploadfile (expand)" -> "[root] local.localSrcFile (expand)"
+		"[root] null_resource.uploadfile (expand)" -> "[root] provider[\"registry.terraform.io/hashicorp/null\"]"
+		"[root] output.account_id" -> "[root] data.azurerm_client_config.current (expand)"
+		"[root] output.object_id" -> "[root] data.azurerm_client_config.current (expand)"
+		"[root] output.rgname" -> "[root] azurerm_resource_group.resourcegroup (expand)"
+		"[root] output.tenant_id" -> "[root] data.azurerm_client_config.current (expand)"
+		"[root] provider[\"registry.terraform.io/hashicorp/azurerm\"] (close)" -> "[root] azurerm_key_vault_access_policy.kv_policy (expand)"
+		"[root] provider[\"registry.terraform.io/hashicorp/azurerm\"] (close)" -> "[root] azurerm_key_vault_secret.KeyVault_Secrets (expand)"
+		"[root] provider[\"registry.terraform.io/hashicorp/azurerm\"] (close)" -> "[root] azurerm_role_assignment.StorageRoleAss (expand)"
+		"[root] provider[\"registry.terraform.io/hashicorp/azurerm\"] (close)" -> "[root] azurerm_role_assignment.SynapseRoleAss (expand)"
+		"[root] provider[\"registry.terraform.io/hashicorp/azurerm\"] (close)" -> "[root] azurerm_storage_container.storage_container (expand)"
+		"[root] provider[\"registry.terraform.io/hashicorp/azurerm\"] (close)" -> "[root] azurerm_synapse_firewall_rule.devOpsIP (expand)"
+		"[root] provider[\"registry.terraform.io/hashicorp/azurerm\"] (close)" -> "[root] azurerm_synapse_role_assignment.SynapseAdminRoleAss (expand)"
+		"[root] provider[\"registry.terraform.io/hashicorp/azurerm\"] (close)" -> "[root] azurerm_synapse_spark_pool.SynapseSpark (expand)"
+		"[root] provider[\"registry.terraform.io/hashicorp/null\"] (close)" -> "[root] null_resource.functions (expand)"
+		"[root] provider[\"registry.terraform.io/hashicorp/null\"] (close)" -> "[root] null_resource.next (expand)"
+		"[root] provider[\"registry.terraform.io/hashicorp/null\"] (close)" -> "[root] null_resource.uploadfile (expand)"
+		"[root] provider[\"registry.terraform.io/hashicorp/time\"] (close)" -> "[root] time_sleep.wait_60_seconds (expand)"
+		"[root] root" -> "[root] output.account_id"
+		"[root] root" -> "[root] output.object_id"
+		"[root] root" -> "[root] output.rgname"
+		"[root] root" -> "[root] output.tenant_id"
+		"[root] root" -> "[root] provider[\"registry.terraform.io/hashicorp/azurerm\"] (close)"
+		"[root] root" -> "[root] provider[\"registry.terraform.io/hashicorp/null\"] (close)"
+		"[root] root" -> "[root] provider[\"registry.terraform.io/hashicorp/time\"] (close)"
+		"[root] root" -> "[root] var.Synapse_ServerlessDB"
+		"[root] time_sleep.wait_60_seconds (expand)" -> "[root] azurerm_synapse_firewall_rule.devOpsIP (expand)"
+		"[root] time_sleep.wait_60_seconds (expand)" -> "[root] provider[\"registry.terraform.io/hashicorp/time\"]"
+	}
+}
+
