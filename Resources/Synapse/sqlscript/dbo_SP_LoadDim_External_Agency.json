@@ -1,0 +1,20 @@
+{
+	"name": "dbo_SP_LoadDim_External_Agency",
+	"properties": {
+		"folder": {
+			"name": "ws-ent-syn-serverlessdb-001/StoredProcedure"
+		},
+		"content": {
+			"query": "CREATE OR ALTER PROCEDURE [dbo].[SP_LoadDim_External_Agency]\n( @GetNewWaterMark bit=0,@RowValidFrom Datetime2(7)='1900-01-01 00:00:00.0000000'\n)\nAS\nBegin \n\tIF @GetNewWaterMark>0\n\tBEGIN\n\tSELECT isnull(max(RowValidFrom),@RowValidFrom) AS RowValidFrom\n\t\t\tFROM [dbo].[ws_externalagency] \n\t\t\tWHERE CAST(RowValidFrom As datetime2(7))>@RowValidFrom\n\tEND\n\tELSE\nWITH CTE AS (\nSELECT \n\t [ws_externalagencyid] AS\t\t\t\t\t[ExternalAgencyID]\n\t,[ws_name] AS\t\t\t\t\t\t\t\t[AgencyName]\n\t,[emailaddress] AS\t\t\t\t\t\t\t[EmailAddress]\n\t,b.LocalizedLabel AS\t\t[Status]\n\t,C.LocalizedLabel AS\t\t[Status Reason]\n\t,[ws_acceptsnotificationsfromworksafe] AS\t[AcceptsNotificationfromWorkSafe]\n\t,[ws_sendsnotificationstoworksafe] AS\t\t[SendsNotificationtoWorkSafe]\n\t,[ws_agency_responsibility] AS\t\t\t\t[AgencyResponsibility]\n\t,[ws_agencywebsite] AS\t\t\t\t\t\t[AgencyWebsite]\n\t,convert(datetimeoffset,[modifiedon]) as\t[ModifiedDate]\n\t,convert(datetimeoffset,[createdon]) as\t\t\t[CreatedDate]\n\t,createdbyname as\t[CreatedBy]\n\t,modifiedbyname\t\t[ModifiedBy]\n\t,ROW_NUMBER()OVER (PARTITION BY ID Order by versionnumber DESC) AS ROW_RUM\nFROM [dbo].[ws_externalagency] A\nLEFT JOIN [dbo].[StateMetadata] B\n\t\t  ON A.statecode=b.State\n\t\t  AND b.EntityName='ws_externalagency'\n\t\t  AND A.RowIsCurrent='true'\nLEFT JOIN [dbo].StatusMetadata C\n\t\t  ON A.statuscode=C.Status\n\t\t  AND c.EntityName='ws_externalagency'\n\t\t  AND A.RowIsCurrent='true'\n)\nSELECT \n --Row_NUMBER() Over (order by [ExternalAgencyID] desc)+1000 AS AgencyKey\n [AgencyName]\n,[AcceptsNotificationfromWorkSafe]\n,[SendsNotificationtoWorkSafe]\n,[AgencyResponsibility]\n,[ExternalAgencyID]\n\t\nFROM CTE WHERE ROW_RUM=1 and [Status]='Active' and ExternalAgencyID is not null\n\nUNION \n\nSELECT \nNull,\nNull,\nNull,\nNull,\nNull\nEND\nGO\n\n\n",
+			"metadata": {
+				"language": "sql"
+			},
+			"currentConnection": {
+				"databaseName": "wsentsynserverlessdb001",
+				"poolName": "Built-in"
+			},
+			"resultLimit": 5000
+		},
+		"type": "SqlQuery"
+	}
+}

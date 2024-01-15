@@ -1,0 +1,20 @@
+{
+	"name": "dbo_SP_LoadDim_NotificationMetaData",
+	"properties": {
+		"folder": {
+			"name": "ws-ent-syn-serverlessdb-001/StoredProcedure"
+		},
+		"content": {
+			"query": "/****** Object:  StoredProcedure [dbo].[SP_LoadDim_NotificationMetaData]    Script Date: 12/22/2022 5:06:42 AM ******/\nSET ANSI_NULLS ON\nGO\n\nSET QUOTED_IDENTIFIER ON\nGO\n\n\nCREATE OR ALTER  PROCEDURE [dbo].[SP_LoadDim_NotificationMetaData]\n( @GetNewWaterMark bit=0,@RowValidFrom Datetime2(7)='1900-01-01 00:00:00.0000000'\n)\nAS\nBegin \n\tIF @GetNewWaterMark>0\n\tBEGIN\n\tSELECT isnull(max(RowValidFrom),@RowValidFrom) AS RowValidFrom\n\t\t\tFROM [dbo].ws_notification\n\t\t\tWHERE CAST(RowValidFrom As datetime2(7))>@RowValidFrom\n\tEND\n\tELSE\nWITH CTE_NotificationMetaData\nAS (\n\tSELECT ws_notificationid AS [NotificationID]\n\t\t--,convert(DATETIMEOFFSET, createdon) AS [NotificationCreatedDate]\n\t\t,Convert(datetime2(0),convert(datetimeoffset,[modifiedon]) AT TIME ZONE 'New Zealand Standard Time') as\t[NotificationModifiedDate]\n\t\t,Convert(datetime2(0),convert(datetimeoffset,[createdon]) AT TIME ZONE 'New Zealand Standard Time') as\t[NotificationCreatedDate]\n\t\t,createdbyname AS [NotificationCreatedBy]\n\t\t--,convert(DATETIMEOFFSET, modifiedon) AS [NotificationModifiedDate]\n\t\t,modifiedbyname AS [NotificationModifiedBy]\n\t\t,owneridname AS [NotificationRecordOwner]\n\t\t,ws_compliancecertifieridname AS [ComplianceCertifierName]\n\t\t,ws_reactiveapprovedbyidname AS [ReactiveApprovedByName]\n\t\t,row_number() OVER (\n\t\t\tPARTITION BY id ORDER BY versionnumber desc\n\t\t\t) AS row_num\n\tFROM [dbo].ws_notification\n\tWHERE  CAST(RowValidFrom as datetime2(7)) > @RowValidFrom\n\tAND RowIsCurrent='true'\n\t)\n\t\nSELECT --row_number() OVER (\t\tORDER BY [NotificationID]\t\t) + 1000 AS NotificationMetadataKey\n\n\t [ComplianceCertifierName]\n\t,[ReactiveApprovedByName]\n\t,COnvert(Varchar(20),[NotificationCreatedDate]) AS [NotificationCreatedDate]\n\t,[NotificationCreatedBy]\n\t,COnvert(Varchar(20),[NotificationModifiedDate]) AS [NotificationModifiedDate]\n\t,[NotificationModifiedBy]\n\t,[NotificationRecordOwner]\n\t,[NotificationID]\nFROM CTE_NotificationMetaData\nWHERE row_num = 1 and NotificationID is not null\n\nUNION \nSELECT\nNull,\nNull,\nNull,\nNull,\nNull,\nNull,\nNull,\n'UNKNOWN'\n\n\n\nEND\nGO\n\n\n",
+			"metadata": {
+				"language": "sql"
+			},
+			"currentConnection": {
+				"databaseName": "wsentsynserverlessdb001",
+				"poolName": "Built-in"
+			},
+			"resultLimit": 5000
+		},
+		"type": "SqlQuery"
+	}
+}

@@ -1,0 +1,68 @@
+{
+	"name": "Ingest to Landing Zone",
+	"properties": {
+		"activities": [
+			{
+				"name": "Copy Dataverse database",
+				"type": "ExecutePipeline",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "1_1 Check Each Table",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"RelativePath": {
+							"value": "@pipeline().parameters.RelativePath",
+							"type": "Expression"
+						},
+						"StorageAccountContainerName": {
+							"value": "@pipeline().parameters.StorageAccountContainerName",
+							"type": "Expression"
+						},
+						"DatabaseName": {
+							"value": "@pipeline().parameters.DBName",
+							"type": "Expression"
+						},
+						"Servername": {
+							"value": "@pipeline().parameters.ServerName",
+							"type": "Expression"
+						},
+						"DataLakeBlobStorageURL": {
+							"value": "@pipeline().parameters.DataLakeBlobStorageURL",
+							"type": "Expression"
+						}
+					}
+				}
+			}
+		],
+		"parameters": {
+			"RelativePath": {
+				"type": "string",
+				"defaultValue": "DataverseTest"
+			},
+			"StorageAccountContainerName": {
+				"type": "string",
+				"defaultValue": "landing"
+			},
+			"DBName": {
+				"type": "string",
+				"defaultValue": "dataverse_wsdttest_unq3f0c71de29f842399d828201e1474"
+			},
+			"ServerName": {
+				"type": "string",
+				"defaultValue": "ws-ent-syn-dmplz-dev-004-ondemand.sql.azuresynapse.net"
+			},
+			"DataLakeBlobStorageURL": {
+				"type": "string",
+				"defaultValue": "https://wsentdatalakedev002.blob.core.windows.net/"
+			}
+		},
+		"folder": {
+			"name": "ZZ Pl Template"
+		},
+		"annotations": []
+	}
+}

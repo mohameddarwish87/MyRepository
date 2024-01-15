@@ -1,0 +1,71 @@
+{
+	"name": "3 One-Off Push Data to Exploration Zone",
+	"properties": {
+		"activities": [
+			{
+				"name": "Execute Copy from Lake to Exploration Zone",
+				"description": "To copy files back to exploration, specify the:\n\nRequired:\nInitative name for the Exploration Zone\nSource Zone the data comes from (usually raw zone)\nSource System the data comes from\n\nOptional Parameters:\n\nSource Table - this is the Source Table the data comes from. If this is left blank, all tables in the source folder will be pushed back\n\nLastUTCWaterMark - A Date modified from watermark in UTC, when you want to copy back a certain date range. If this is blank it will copy everything from the Table folder. (eg 2022-06-01T22:28:45.9674582Z)\n\nif ExplorationPath  is specified, it overrides the ExplorationZoneInitiative\\SourceSystem path. This parameter is used by the 'Push to Incremental' step of the Ingestion Pipeline that pushes newly incoming data to the exploration zone.",
+				"type": "ExecutePipeline",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "3_2 Copy from Lake to Exploration Zone",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"ExplorationZoneInitiative": {
+							"value": "@pipeline().parameters.ExplorationZoneInitiative",
+							"type": "Expression"
+						},
+						"SourceSystem": {
+							"value": "@pipeline().parameters.SourceSystem",
+							"type": "Expression"
+						},
+						"SourceTable": {
+							"value": "@pipeline().parameters.SourceTable",
+							"type": "Expression"
+						},
+						"LastUTCWaterMark": {
+							"value": "@pipeline().parameters.LastUTCWaterMark",
+							"type": "Expression"
+						},
+						"ExplorationPath": {
+							"value": "@pipeline().parameters.ExplorationPath",
+							"type": "Expression"
+						},
+						"StorageAccountContainerName": {
+							"value": "@pipeline().parameters.StorageAccountContainerName",
+							"type": "Expression"
+						}
+					}
+				}
+			}
+		],
+		"parameters": {
+			"ExplorationZoneInitiative": {
+				"type": "string"
+			},
+			"SourceSystem": {
+				"type": "string"
+			},
+			"SourceTable": {
+				"type": "string"
+			},
+			"LastUTCWaterMark": {
+				"type": "string"
+			},
+			"ExplorationPath": {
+				"type": "string"
+			},
+			"StorageAccountContainerName": {
+				"type": "string"
+			}
+		},
+		"folder": {
+			"name": "2b Generic Ingestion Pipeline"
+		},
+		"annotations": []
+	}
+}

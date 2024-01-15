@@ -1,0 +1,139 @@
+trigger: none
+parameters:
+- name: envSelection
+  displayName: Deploy to Environment
+  type: string
+  default: dev
+  values:
+  - dev
+  - uat
+  - prod
+variables:
+- group: ws-datamanagementplatform-${{parameters.envSelection}}-rg #ws-datamanagementplatform-dev-rg
+jobs:
+- job: Provision
+  displayName: 'Provision Environment'
+  pool: '$(Agent_Pool)'
+    #vmImage: windows-latest
+  steps:
+  - task: CopyFiles@2
+    inputs: 
+      targetFolder: './'
+  - task: PublishBuildArtifacts@1
+    displayName: Publish artifacts
+    inputs:
+      PathtoPublish: './'
+      artifactName: drop
+#  - task: AzurePowerShell@5
+#    displayName: Setup Python Virtual Environment
+#    inputs:
+#      azureSubscription: '$(DevOpsServiceConnection)' 
+#      scriptType: filePath
+#      scriptPath: Deployment/python_setup.ps1
+#      azurePowerShellVersion: latestVersion
+#  - task: AzurePowerShell@5
+#    displayName: Whitelist Devops agent IP
+#    inputs:
+#      azureSubscription: '$(DevOpsServiceConnection)'
+#      azurePowerShellVersion: latestVersion
+#      ScriptType: 'InlineScript' 
+#      Inline: |
+#          $ip = (Invoke-WebRequest -uri "http://ifconfig.me/ip" -UseBasicParsing).Content
+#          az functionapp config access-restriction add --scm-site true -g "$(ResouceGroup_Name)" -n "$(FunctionApp_Name)" --rule-name devops_ip --action Allow --ip-address "$ip" --priority 200
+#          Start-Sleep -Seconds 90
+#    env:
+#        ResouceGroup_Name: $(ResouceGroup_Name)
+#        FunctionApp_Name: $(FunctionApp_Name)
+#  - task: AzurePowerShell@5
+#    displayName: Enable Hyper-V Module
+#    inputs:
+#      azureSubscription: '$(DevOpsServiceConnection)'
+#      azurePowerShellVersion: latestVersion
+#      ScriptType: 'InlineScript' 
+#      Inline: |
+#          Enable-WindowsOptionalFeature -Online -FeatureName Microsoft-Hyper-V-All
+  - task: AzurePowerShell@5
+    displayName: Infrastructure
+    inputs:
+      azureSubscription: '$(DevOpsServiceConnection)' 
+      scriptType: filePath
+      scriptPath: Deployment/CD_0_Master.ps1
+      azurePowerShellVersion: latestVersion
+      PowerShell: true
+    env:
+        SP_CLIENT_ID: $(SP_Client_ID)
+        SP_CLIENT_SECRET: $(SP_Client_Secret)
+        SP_TENANT_ID: $(SP_Tenant_ID)
+        SP_OBJECT_ID: $(SP_Object_ID)
+        VM_Password: $(VM_Password)
+        SYNAPSE_SQLADMINISTRATORPASSWORD_SECRET: $(Synapse_SqlAdministratorPassword_secret)
+    
+#  - task: AzurePowerShell@5
+#    displayName: Remove Devops agent IP
+#    inputs:
+#      azureSubscription: '$(DevOpsServiceConnection)'
+#      azurePowerShellVersion: latestVersion
+#      ScriptType: 'InlineScript' 
+#      Inline: |
+#          az functionapp config access-restriction remove -g "$(ResouceGroup_Name)" -n "$(FunctionApp_Name)" --rule-name devops_ip
+#    env:
+#        ResouceGroup_Name: $(ResouceGroup_Name)
+#        FunctionApp_Name: $(FunctionApp_Name)
+  - task: AzureKeyVault@2
+    inputs:
+      azureSubscription: '$(DevOpsServiceConnection)'
+      KeyVaultName: '$(KeyVault_Name)' 
+      SecretsFilter: '*'
+      RunAsPreJob: false
+  - task: AzurePowerShell@5
+    displayName: Synapse SQL Serverless DB Objects
+    inputs:
+      azureSubscription: '$(DevOpsServiceConnection)'
+      azurePowerShellVersion: latestVersion
+      ScriptType: 'InlineScript' 
+      Inline: |
+          $SP_Client_ID = Get-AzKeyVaultSecret -VaultName $(KeyVault_Name) -Name $(KeyVault_SP_ClientId) -AsPlainText
+          $SP_Client_Secret = Get-AzKeyVaultSecret -VaultName $(KeyVault_Name) -Name $(KeyVault_SP_ClientSecret) -AsPlainText
+          $SP_Tenant_ID = Get-AzKeyVaultSecret -VaultName $(KeyVault_Name) -Name $(KeyVault_SP_TenantId) -AsPlainText
+          $secretValue = Get-AzKeyVaultSecret -VaultName $(KeyVault_Name) -Name $(KeyVault_Synapse_DBPassword) -AsPlainText
+          Write-Host "Client ID: $SP_Client_ID"
+          Write-Host "Tenant ID: $SP_Tenant_ID"
+          Write-Host "Client Secret: $SP_Client_Secret"
+          $request = Invoke-RestMethod -Method POST `
+           -Uri "https://login.microsoftonline.com/$SP_Tenant_ID/oauth2/token"`
+           -Body @{ resource="https://database.windows.net/"; grant_type="client_credentials"; client_id="$SP_Client_ID"; client_secret="$SP_Client_Secret" }`
+           -ContentType "application/x-www-form-urlencoded"
+          Write-Host "1"
+          $access_token = $request.access_token
+          Write-Host "2"
+          $DatabaseServer = "$(Synapse_Name)-ondemand.sql.azuresynapse.net"
+          Write-Host "3"
+          $Username = "$(Synapse_SqlAdministratorLogin)"
+          $Password = "$secretValue"
+          $DB_Name = "$(Synapse_ServerlessDB)"
+          $Master = "master"
+          $SP = "$(ServicePrincipalName)"
+          Write-Host "4"
+          $qcd = "IF NOT EXISTS(SELECT * FROM sys.databases WHERE name = '$DB_Name') BEGIN CREATE DATABASE [$DB_Name] END"
+          Write-Host "5"
+          Invoke-SqlCmd -ServerInstance "$DatabaseServer" `
+                        -U "$Username" `
+                        -P "$Password" `
+                        -Database "$Master" `
+                        -Query "$qcd"
+#          $qcd = "USE $DB_Name CREATE LOGIN [$SP] from EXTERNAL PROVIDER;CREATE USER [$SP] FROM LOGIN [$SP];alter role db_owner add member [$SP]"
+#          Write-Host "6"
+#          Invoke-SqlCmd -ServerInstance "$DatabaseServer" `
+#                        -U "$Username" `
+#                        -P "$Password" `
+#                        -Database "$Master" `
+#                        -Query "$qcd"
+
+#          Write-Host "7"
+#          Invoke-SqlCmd -ServerInstance "$DatabaseServer" `
+#                        -U "$Username" `
+#                        -P "$Password" `
+#                        -Database "$DB_Name" `
+#                        -InputFile "Resources/Synapse/sqlscript/Serverless_Queries.sql"
+#          Write-Host "8"
+      

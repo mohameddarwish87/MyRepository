@@ -1,0 +1,7 @@
+{
+	"name": "AzureSynapseAnalytics843",
+	"properties": {
+		"privateLinkResourceId": "/subscriptions/601d68db-bf92-4f84-ae2e-fe2d9e72cc15/resourceGroups/ws-ent-rg-dev-003/providers/Microsoft.Synapse/workspaces/ws-ent-synapseworkspace-dev-001",
+		"groupId": "sqlOnDemand"
+	}
+}

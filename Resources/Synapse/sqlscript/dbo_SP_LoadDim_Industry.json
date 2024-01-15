@@ -1,0 +1,20 @@
+{
+	"name": "dbo_SP_LoadDim_Industry",
+	"properties": {
+		"folder": {
+			"name": "ws-ent-syn-serverlessdb-001/StoredProcedure"
+		},
+		"content": {
+			"query": "/****** Object:  StoredProcedure [dbo].[SP_LoadDim_Industry]    Script Date: 12/22/2022 5:05:22 AM ******/\nSET ANSI_NULLS ON\nGO\n\nSET QUOTED_IDENTIFIER ON\nGO\n\n\nCREATE OR ALTER  PROCEDURE [dbo].[SP_LoadDim_Industry]\n( @GetNewWaterMark bit=0,@RowValidFrom Datetime2(7)='1900-01-01 00:00:00.0000000'\n)\nAS\n\nBegin \n\tIF @GetNewWaterMark>0\n\tBEGIN\n\tSELECT isnull(max(RowValidFrom),@RowValidFrom) AS RowValidFrom\n\t\t\tFROM [dbo].[ws_industry]\n\t\t\tWHERE CAST(RowValidFrom As datetime2(7))>@RowValidFrom\n\tEND\n\tELSE\nWITH CTE AS (\n\tSELECT\nws_industryid\t\t\t\t[IndustryID]\n,ws_name as\t\t\t\t\t[CodeIndustryName]\n,ws_industry\t\t\t\t[IndustryName]\n,b.LocalizedLabel AS\t\t[Status]\n,C.LocalizedLabel AS\t\t[StatusReason]\n,ws_level as\t\t\t\t[IndustryLevel]\n,ws_parentindustry as\t\t[PareantIndustryID]\n,ws_parentindustryname as\t[ParentIndustryName]\n,ws_code as\t\t\t\t\t[IndustryCode]\n,convert(datetimeoffset,[modifiedon]) as\t[ModifiedDate]\n,convert(datetimeoffset,[createdon]) as\t\t[CreatedDate]\n,createdbyname as\t[CreatedBy]\n,modifiedbyname\t\t[ModifiedBy]\n,ROW_NUMBER()OVER (PARTITION BY ID Order by versionnumber DESC) AS ROW_RUM\n ,a.RowValidFrom,a.RowValidTo,a.RowIsCurrent \n--Select *  \n FROM [dbo].[ws_industry] A -- should be file location and parameter\nLEFT JOIN [dbo].[StateMetadata] B\n\t\t  ON A.statecode=b.State\n\t\t  AND b.EntityName='ws_industry'\n\t\t  AND a.RowIsCurrent='true'\nLEFT JOIN [dbo].StatusMetadata C\n\t\t  ON A.statuscode=C.Status\n\t\t  AND c.EntityName='ws_industry'\n\t\t  AND a.RowIsCurrent='true'\n\t\t  WHERE CAST(a.RowValidFrom as datetime2(7)) > @RowValidFrom\n\t\t )\n\nSELECT \n --Row_NUMBER() Over (order by [IndustryID] desc)+1000 AS IndustryKey\n [IndustryCode]\n,[CodeIndustryName]\n,[IndustryName]\n,convert(char(1),[IndustryLevel]) as [IndustryLevel]\n,[ParentIndustryName]\n,[IndustryID]\n,[PareantIndustryID]\n\nFROM CTE WHERE ROW_RUM=1 \n\t\tand Status='Active' \n\t\tand IndustryID is not null\n\nUNION \n\nSELECT \nNull,\nNull,\nNull,\nNull,\nNull,\n'UNKNOWN',\n'UNKNOWN'\nEND\nGO\n\n\n",
+			"metadata": {
+				"language": "sql"
+			},
+			"currentConnection": {
+				"databaseName": "wsentsynserverlessdb001",
+				"poolName": "Built-in"
+			},
+			"resultLimit": 5000
+		},
+		"type": "SqlQuery"
+	}
+}

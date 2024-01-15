@@ -1,0 +1,230 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+       // "vulnerabilityAssessments_Default_storageContainerPath": {
+            //"type": "SecureString"
+        //    "type": "String"
+       // },
+        "workspaces_intergen_data_mdp_synapse_dev_name": {
+            "type": "String",
+            "defaultValue": "intergen-syn-dev-test1"        
+        },
+        "storage_account_name":{
+           // "defaultValue": "intergen-data-mdp-adls-dev",
+            "type": "String"
+        },
+        "tenantId":{
+            "type": "string"    
+        },
+        "Synapse_managed_resource_group":{
+            "type": "string"    
+        },
+        "Synapse_SqlAdministratorLogin":{
+            "type": "string"
+        },
+       "Synapse_SqlAdministratorPassword":{
+            "type": "string"
+        },
+        "spark_pool_name":{
+            "type": "string"
+        },
+        "spark_pool_shutdown_time":{
+            "type": "int"
+        },
+        "KeyVault_Name":{
+            "type": "string"
+        }
+    },
+    "variables": {
+        "KeyVault_Name": "[parameters('KeyVault_Name')]",
+        "Synapse_SqlAdministratorPassword": "[parameters('Synapse_SqlAdministratorPassword')]"
+    },
+    "resources": [
+        {
+            "type": "Microsoft.Synapse/workspaces",
+            "apiVersion": "2021-06-01",
+            "name": "[parameters('workspaces_intergen_data_mdp_synapse_dev_name')]",
+            "location": "[resourceGroup().location]",
+            "tags": {
+                "creator": "Metadata Data Driven Framework",
+                "department": "Metadata Data Driven Framework",
+                "description": "Metadata Data Driven Framework",
+                "Project": "Metadata Driven ETL Framework",
+                "owner":"Metadata Driven ETL Framework" //this line may cause error
+            },
+            "identity": {
+                "type": "SystemAssigned"
+            },
+            "properties": {
+                "defaultDataLakeStorage": {
+                    "accountUrl": "[concat('https://',parameters('storage_account_name'),'.dfs.core.windows.net')]",
+                    "filesystem": "[parameters('storage_account_name')]"
+                },
+                "encryption": {},
+                "connectivityEndpoints": {
+                    "web": "[concat('https://web.azuresynapse.net?workspace=%2fsubscriptions%2f',subscription().subscriptionId,'%2fresourceGroups%2f',resourceGroup().name,'%2fproviders%2fMicrosoft.Synapse%2fworkspaces%2f', parameters('workspaces_intergen_data_mdp_synapse_dev_name'))]",
+                    "dev": "[concat('https://', parameters('workspaces_intergen_data_mdp_synapse_dev_name'), '.dev.azuresynapse.net')]",
+                    "sqlOnDemand": "[concat(parameters('workspaces_intergen_data_mdp_synapse_dev_name'), '-ondemand.sql.azuresynapse.net')]",
+                    "sql": "[concat(parameters('workspaces_intergen_data_mdp_synapse_dev_name'), '.sql.azuresynapse.net')]"
+                },
+                "managedResourceGroupName": "[parameters('Synapse_managed_resource_group')]",
+                "sqlAdministratorLogin": "[parameters('Synapse_SqlAdministratorLogin')]",//"sqladminuser",
+                "sqlAdministratorLoginPassword": "[variables('Synapse_SqlAdministratorPassword')]",
+               // "sqlAdministratorLoginPassword": "[concat('@Microsoft.KeyVault(SecretUri=https://', variables('KeyVault_Name'),'.vault.azure.net/secrets/',variables('sqlAdministratorLoginPassword'),')')]",
+                "privateEndpointConnections": [],
+                "workspaceRepositoryConfiguration": {
+                //    "accountName": "empired",
+                //    "collaborationBranch": "master",
+                    ////"lastCommitId": "f0f19392281f39ee4ec987100d4ad260a5050a1a",
+                //    "projectName": "Empired-Data-AI-Integration",
+                //    "repositoryName": "intergen-metadata-driven-framework",
+                    "rootFolder": "/",
+                    "tenantId": "[parameters('tenantId')]",
+                    "type": "WorkspaceVSTSConfiguration"
+                },
+                "publicNetworkAccess": "Enabled"//,
+              //  "cspWorkspaceAdminProperties": {
+              //      "initialWorkspaceAdminObjectId": "60cbf560-264d-4d9d-83af-90679ad53c81"
+              //  }
+            }
+        },
+        {
+            "type": "Microsoft.Synapse/workspaces/auditingSettings",
+            "apiVersion": "2021-06-01",
+            "name": "[concat(parameters('workspaces_intergen_data_mdp_synapse_dev_name'), '/Default')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Synapse/workspaces', parameters('workspaces_intergen_data_mdp_synapse_dev_name'))]"
+            ],
+            "properties": {
+                "retentionDays": 0,
+                "auditActionsAndGroups": [],
+                "isStorageSecondaryKeyInUse": false,
+                "isAzureMonitorTargetEnabled": false,
+                "state": "Disabled",
+                "storageAccountSubscriptionId": "00000000-0000-0000-0000-000000000000"
+            }
+        },
+        {
+            "type": "Microsoft.Synapse/workspaces/bigDataPools",
+            "apiVersion": "2021-06-01",
+            //"name": "[concat(parameters('workspaces_intergen_data_mdp_synapse_dev_name'), '/Spark3MDF')]",
+            "name": "[concat(parameters('workspaces_intergen_data_mdp_synapse_dev_name'), '/',parameters('spark_pool_name'))]",
+            "location": "[resourceGroup().location]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Synapse/workspaces', parameters('workspaces_intergen_data_mdp_synapse_dev_name'))]"
+            ],
+            "properties": {
+                "creationDate": "2022-01-21T04:09:39.72Z",
+                "sparkVersion": "3.1",
+                "nodeCount": 10,
+                "nodeSize": "Small",
+                "nodeSizeFamily": "MemoryOptimized",
+                "autoScale": {
+                    "enabled": true,
+                    "minNodeCount": 3,
+                    "maxNodeCount": 10
+                },
+                "autoPause": {
+                    "enabled": true,
+                    "delayInMinutes": "[parameters('spark_pool_shutdown_time')]"
+                },
+                "isComputeIsolationEnabled": false,
+                "sessionLevelPackagesEnabled": false,
+                "cacheSize": 0,
+                "dynamicExecutorAllocation": {
+                    "enabled": false
+                },
+                "provisioningState": "Succeeded"
+            }
+        },
+
+        {
+            "type": "Microsoft.Synapse/workspaces/extendedAuditingSettings",
+            "apiVersion": "2021-06-01",
+            "name": "[concat(parameters('workspaces_intergen_data_mdp_synapse_dev_name'), '/Default')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Synapse/workspaces', parameters('workspaces_intergen_data_mdp_synapse_dev_name'))]"
+            ],
+            "properties": {
+                "retentionDays": 0,
+                "auditActionsAndGroups": [],
+                "isStorageSecondaryKeyInUse": false,
+                "isAzureMonitorTargetEnabled": false,
+                "state": "Disabled",
+                "storageAccountSubscriptionId": "00000000-0000-0000-0000-000000000000"
+            }
+        },
+        {
+            "type": "Microsoft.Synapse/workspaces/firewallRules",
+            "apiVersion": "2021-06-01",
+            "name": "[concat(parameters('workspaces_intergen_data_mdp_synapse_dev_name'), '/allowAll')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Synapse/workspaces', parameters('workspaces_intergen_data_mdp_synapse_dev_name'))]"
+            ],
+            "properties": {
+                "startIpAddress": "0.0.0.0",
+                "endIpAddress": "255.255.255.255"
+            }
+        },
+        {
+            "type": "Microsoft.Synapse/workspaces/firewallRules",
+            "apiVersion": "2021-06-01",
+            "name": "[concat(parameters('workspaces_intergen_data_mdp_synapse_dev_name'), '/AllowAllWindowsAzureIps')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Synapse/workspaces', parameters('workspaces_intergen_data_mdp_synapse_dev_name'))]"
+            ],
+            "properties": {
+                "startIpAddress": "0.0.0.0",
+                "endIpAddress": "0.0.0.0"
+            }
+        },
+        {
+            "type": "Microsoft.Synapse/workspaces/firewallRules",
+            "apiVersion": "2021-06-01",
+            "name": "[concat(parameters('workspaces_intergen_data_mdp_synapse_dev_name'), '/ClientIPAddress-2021-11-9-16-47-23')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Synapse/workspaces', parameters('workspaces_intergen_data_mdp_synapse_dev_name'))]"
+            ],
+            "properties": {
+                "startIpAddress": "0.0.0.0",
+                "endIpAddress": "255.255.255.255"
+            }
+        },
+        {
+            "type": "Microsoft.Synapse/workspaces/integrationruntimes",
+            "apiVersion": "2021-06-01",
+            "name": "[concat(parameters('workspaces_intergen_data_mdp_synapse_dev_name'), '/AutoResolveIntegrationRuntime')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Synapse/workspaces', parameters('workspaces_intergen_data_mdp_synapse_dev_name'))]"
+            ],
+            "properties": {
+                "type": "Managed",
+                "typeProperties": {
+                    "computeProperties": {
+                        "location": "AutoResolve"
+                    }
+                }
+            }
+        },
+        {
+            "type": "Microsoft.Synapse/workspaces/securityAlertPolicies",
+            "apiVersion": "2021-06-01",
+            "name": "[concat(parameters('workspaces_intergen_data_mdp_synapse_dev_name'), '/Default')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Synapse/workspaces', parameters('workspaces_intergen_data_mdp_synapse_dev_name'))]"
+            ],
+            "properties": {
+                "state": "Disabled",
+                "disabledAlerts": [
+                    ""
+                ],
+                "emailAddresses": [
+                    ""
+                ],
+                "emailAccountAdmins": false,
+                "retentionDays": 0
+            }
+        }
+    ]
+}

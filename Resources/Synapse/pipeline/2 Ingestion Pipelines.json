@@ -1,0 +1,368 @@
+{
+	"name": "2 Ingestion Pipelines",
+	"properties": {
+		"activities": [
+			{
+				"name": "Watermark Is Blank",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "Get Folder Metadata",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@bool(pipeline().parameters.WatermarkColIsBlank)",
+						"type": "Expression"
+					},
+					"ifFalseActivities": [
+						{
+							"name": "Incremental Copy Activity to Datalake",
+							"type": "Copy",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "SqlDWSource",
+									"sqlReaderQuery": {
+										"value": "select * from (select  outerq.*,\n        case when outerq.[versionnumber] = sub.lowerst_version then outerq.createdon when outerq.[versionnumber] = sub.highest_version then outerq.modifiedon else LEAD(outerq.modifiedon,0) over (PARTITION BY outerq.Id ORDER BY modifiedon desc ) end as RowValidFrom\n        ,case when outerq.[versionnumber] = sub.highest_version then '9999-01-01' else DateAdd(s,-1,LAG(outerq.modifiedon,1) over (PARTITION BY outerq.Id ORDER BY modifiedon desc )) end as RowValidTo\n        ,case when IsDelete = 'True' then 'false' when outerq.[versionnumber] = sub.highest_version then 'true' else 'false' end as RowIsCurrent\n  FROM  dbo.@{pipeline().parameters.TableName} outerq , (select id, min([versionnumber]) as lowerst_version, max([versionnumber]) as highest_version\n                                        from dbo.@{pipeline().parameters.TableName} group by id) sub\n  where  sub.Id = outerq.id ) s where RowValidFrom <= '@{pipeline().parameters.NewWatermark}' and RowValidFrom > '@{pipeline().parameters.LastWatermark}'",
+										"type": "Expression"
+									},
+									"queryTimeout": "02:00:00",
+									"partitionOption": "None"
+								},
+								"sink": {
+									"type": "ParquetSink",
+									"storeSettings": {
+										"type": "AzureBlobFSWriteSettings"
+									},
+									"formatSettings": {
+										"type": "ParquetWriteSettings"
+									}
+								},
+								"enableStaging": false,
+								"translator": {
+									"type": "TabularTranslator",
+									"typeConversion": true,
+									"typeConversionSettings": {
+										"allowDataTruncation": true,
+										"treatBooleanAsNumber": false
+									}
+								}
+							},
+							"inputs": [
+								{
+									"referenceName": "Ds_ASA_DMP",
+									"type": "DatasetReference",
+									"parameters": {
+										"pm_DBName": {
+											"value": "@pipeline().parameters.DatabaseName",
+											"type": "Expression"
+										},
+										"pm_ServerName": {
+											"value": "@pipeline().parameters.Servername",
+											"type": "Expression"
+										}
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "AzureBlobStorage_Parquet_Azure",
+									"type": "DatasetReference",
+									"parameters": {
+										"FileName": {
+											"value": "@{pipeline().parameters.TableSchema}_@{pipeline().parameters.TableName}_@{utcNow()}.parquet",
+											"type": "Expression"
+										},
+										"RelativePath": {
+											"value": "@pipeline().parameters.RelativePath",
+											"type": "Expression"
+										},
+										"StorageAccountContainerName": {
+											"value": "@pipeline().parameters.StorageAccountContainerName",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						},
+						{
+							"name": "Set lastwatermark",
+							"type": "WebActivity",
+							"dependsOn": [
+								{
+									"activity": "Incremental Copy Activity to Datalake",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"url": {
+									"value": "@concat(pipeline().parameters.DataLakeBlobStorageURL,pipeline().parameters.StorageAccountContainerName,'/',pipeline().parameters.RelativePath,'?comp=metadata')",
+									"type": "Expression"
+								},
+								"connectVia": {
+									"referenceName": "AutoResolveIntegrationRuntime",
+									"type": "IntegrationRuntimeReference"
+								},
+								"method": "PUT",
+								"headers": {
+									"x-ms-version": "2020-10-02",
+									"x-ms-blob-type": "BlockBlob",
+									"x-ms-meta-businesskey1": {
+										"value": "@activity('Get Folder Metadata').output.ADFWebActivityResponseHeaders['x-ms-meta-businesskey1']",
+										"type": "Expression"
+									},
+									"x-ms-meta-businesskey2": {
+										"value": "@activity('Get Folder Metadata').output.ADFWebActivityResponseHeaders['x-ms-meta-businesskey2']",
+										"type": "Expression"
+									},
+									"x-ms-meta-businesskey3": {
+										"value": "@activity('Get Folder Metadata').output.ADFWebActivityResponseHeaders['x-ms-meta-businesskey3']",
+										"type": "Expression"
+									},
+									"x-ms-meta-businesskey4": {
+										"value": "@activity('Get Folder Metadata').output.ADFWebActivityResponseHeaders['x-ms-meta-businesskey4']",
+										"type": "Expression"
+									},
+									"x-ms-meta-businesskey5": {
+										"value": "@activity('Get Folder Metadata').output.ADFWebActivityResponseHeaders['x-ms-meta-businesskey5']",
+										"type": "Expression"
+									},
+									"x-ms-meta-businesskey6": {
+										"value": "@activity('Get Folder Metadata').output.ADFWebActivityResponseHeaders['x-ms-meta-businesskey6']",
+										"type": "Expression"
+									},
+									"x-ms-meta-businesskey7": {
+										"value": "@activity('Get Folder Metadata').output.ADFWebActivityResponseHeaders['x-ms-meta-businesskey7']",
+										"type": "Expression"
+									},
+									"x-ms-meta-datepartitionpath": {
+										"value": "@activity('Get Folder Metadata').output.ADFWebActivityResponseHeaders['x-ms-meta-datepartitionpath']",
+										"type": "Expression"
+									},
+									"x-ms-meta-explorationzonepath": {
+										"value": "@activity('Get Folder Metadata').output.ADFWebActivityResponseHeaders['x-ms-meta-explorationzonepath']",
+										"type": "Expression"
+									},
+									"x-ms-meta-lastwatermark": {
+										"value": "@pipeline().parameters.NewWatermark",
+										"type": "Expression"
+									},
+									"x-ms-meta-partitionkey": {
+										"value": "@activity('Get Folder Metadata').output.ADFWebActivityResponseHeaders['x-ms-meta-partitionkey']",
+										"type": "Expression"
+									},
+									"x-ms-meta-pushtocuratedzone": {
+										"value": "@activity('Get Folder Metadata').output.ADFWebActivityResponseHeaders['x-ms-meta-pushtocuratedzone']",
+										"type": "Expression"
+									},
+									"x-ms-meta-pushtodw": {
+										"value": "@activity('Get Folder Metadata').output.ADFWebActivityResponseHeaders['x-ms-meta-pushtodw']",
+										"type": "Expression"
+									},
+									"x-ms-meta-pushtoexplorationzone": {
+										"value": "@activity('Get Folder Metadata').output.ADFWebActivityResponseHeaders['x-ms-meta-pushtoexplorationzone']",
+										"type": "Expression"
+									},
+									"x-ms-meta-pushtostagingzone": {
+										"value": "@activity('Get Folder Metadata').output.ADFWebActivityResponseHeaders['x-ms-meta-pushtostagingzone']",
+										"type": "Expression"
+									},
+									"x-ms-meta-scd2flag": {
+										"value": "@activity('Get Folder Metadata').output.ADFWebActivityResponseHeaders['x-ms-meta-scd2flag']",
+										"type": "Expression"
+									},
+									"x-ms-meta-upsert": {
+										"value": "@activity('Get Folder Metadata').output.ADFWebActivityResponseHeaders['x-ms-meta-upsert']",
+										"type": "Expression"
+									},
+									"x-ms-meta-watermarkcol": {
+										"value": "@activity('Get Folder Metadata').output.ADFWebActivityResponseHeaders['x-ms-meta-watermarkcol']",
+										"type": "Expression"
+									}
+								},
+								"body": ".",
+								"authentication": {
+									"type": "MSI",
+									"resource": "https://storage.azure.com/"
+								}
+							}
+						}
+					],
+					"ifTrueActivities": [
+						{
+							"name": "FullLoad Copy Activity to Datalake",
+							"type": "Copy",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "SqlDWSource",
+									"sqlReaderQuery": {
+										"value": "@Replace(Replace('SELECT * FROM  [~TableSchema].[~TableName]','~TableSchema',pipeline().parameters.TableSchema),'~TableName',pipeline().parameters.TableName)",
+										"type": "Expression"
+									},
+									"queryTimeout": "02:00:00",
+									"partitionOption": "None"
+								},
+								"sink": {
+									"type": "ParquetSink",
+									"storeSettings": {
+										"type": "AzureBlobFSWriteSettings"
+									},
+									"formatSettings": {
+										"type": "ParquetWriteSettings"
+									}
+								},
+								"enableStaging": false,
+								"translator": {
+									"type": "TabularTranslator",
+									"typeConversion": true,
+									"typeConversionSettings": {
+										"allowDataTruncation": true,
+										"treatBooleanAsNumber": false
+									}
+								}
+							},
+							"inputs": [
+								{
+									"referenceName": "Ds_ASA_DMP",
+									"type": "DatasetReference",
+									"parameters": {
+										"pm_DBName": {
+											"value": "@pipeline().parameters.DatabaseName",
+											"type": "Expression"
+										},
+										"pm_ServerName": {
+											"value": "@pipeline().parameters.Servername",
+											"type": "Expression"
+										}
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "AzureBlobStorage_Parquet_Azure",
+									"type": "DatasetReference",
+									"parameters": {
+										"FileName": {
+											"value": "@{pipeline().parameters.TableSchema}_@{pipeline().parameters.TableName}_@{utcNow()}.parquet",
+											"type": "Expression"
+										},
+										"RelativePath": {
+											"value": "@pipeline().parameters.RelativePath",
+											"type": "Expression"
+										},
+										"StorageAccountContainerName": {
+											"value": "@pipeline().parameters.StorageAccountContainerName",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						}
+					]
+				}
+			},
+			{
+				"name": "Get Folder Metadata",
+				"type": "WebActivity",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": {
+						"value": "@concat(pipeline().parameters.DataLakeBlobStorageURL,pipeline().parameters.StorageAccountContainerName,'/',pipeline().parameters.RelativePath)",
+						"type": "Expression"
+					},
+					"connectVia": {
+						"referenceName": "AutoResolveIntegrationRuntime",
+						"type": "IntegrationRuntimeReference"
+					},
+					"method": "GET",
+					"headers": {
+						"x-ms-version": "2020-10-02"
+					},
+					"authentication": {
+						"type": "MSI",
+						"resource": "https://storage.azure.com/"
+					}
+				}
+			}
+		],
+		"parameters": {
+			"RelativePath": {
+				"type": "string"
+			},
+			"WatermarkColIsBlank": {
+				"type": "string"
+			},
+			"TableName": {
+				"type": "string"
+			},
+			"TableSchema": {
+				"type": "string"
+			},
+			"WatermarkCol": {
+				"type": "string"
+			},
+			"NewWatermark": {
+				"type": "string"
+			},
+			"DataLakeBlobStorageURL": {
+				"type": "string"
+			},
+			"StorageAccountContainerName": {
+				"type": "string"
+			},
+			"LastWatermark": {
+				"type": "string"
+			},
+			"DatabaseName": {
+				"type": "string"
+			},
+			"Servername": {
+				"type": "string"
+			}
+		},
+		"folder": {
+			"name": "2b Generic Ingestion Pipeline"
+		},
+		"annotations": []
+	}
+}

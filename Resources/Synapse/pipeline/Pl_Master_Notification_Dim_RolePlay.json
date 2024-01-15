@@ -1,0 +1,620 @@
+{
+	"name": "Pl_Master_Notification_Dim_RolePlay",
+	"properties": {
+		"activities": [
+			{
+				"name": "Create_Dim_AgencyReceivedFrom",
+				"type": "Script",
+				"dependsOn": [
+					{
+						"activity": "Drop Dim_AgencyReceivedFrom",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"linkedServiceName": {
+					"referenceName": "Azure-Synapse-WorkspaceDefaultSqlServer",
+					"type": "LinkedServiceReference",
+					"parameters": {
+						"DBName": {
+							"value": "@pipeline().parameters.ASA_DBName",
+							"type": "Expression"
+						},
+						"Servername": {
+							"value": "@pipeline().parameters.ASA_ServerName",
+							"type": "Expression"
+						}
+					}
+				},
+				"typeProperties": {
+					"scripts": [
+						{
+							"type": "Query",
+							"text": {
+								"value": "CREATE or alter View   [@{pipeline().parameters.DataMart_SchemaName}].[Dim_AgencyReceivedFrom] as \nSELECT [DLDim_External_AgencyKey] as [AgencyReceivedFromKey]\n      ,[AgencyName] as [AgencyReceivedFrom]\n      ,[AcceptsNotificationfromWorkSafe] as [AgencyReceivedFrom_AcceptsNotificationFromWorkSafe]\n      ,[SendsNotificationtoWorkSafe] as  [AgencyReceivedFrom_SendsNotificationToWorkSafe]\n      ,[AgencyResponsibility] as [AgencyReceivedFrom_Responsibility]\n      ,[ExternalAgencyID] AS [AgencyReceivedFrom_ExternalAgencyID]\n\t  ,[NonBusinessKeyHash]\n      ,[BusinessKeyHash]\n      ,[RunID]\n      ,[RowIsCurrent]\n      ,[RowValidFrom]\n      ,[RowValidTo]\n      ,[RawFilePath]\n  FROM [@{pipeline().parameters.DataMart_SchemaName}].[Dim_External_Agency];",
+								"type": "Expression"
+							}
+						}
+					],
+					"scriptBlockExecutionTimeout": "02:00:00"
+				}
+			},
+			{
+				"name": "Create Dim_AgencySentTo",
+				"type": "Script",
+				"dependsOn": [
+					{
+						"activity": "Drop Dim_AgencySentTo",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"linkedServiceName": {
+					"referenceName": "Azure-Synapse-WorkspaceDefaultSqlServer",
+					"type": "LinkedServiceReference",
+					"parameters": {
+						"DBName": {
+							"value": "@pipeline().parameters.ASA_DBName",
+							"type": "Expression"
+						},
+						"Servername": {
+							"value": "@pipeline().parameters.ASA_ServerName",
+							"type": "Expression"
+						}
+					}
+				},
+				"typeProperties": {
+					"scripts": [
+						{
+							"type": "Query",
+							"text": {
+								"value": "CREATE or alter View   [@{pipeline().parameters.DataMart_SchemaName}].[Dim_AgencySentTo] as \nSELECT [DLDim_External_AgencyKey] as [AgencySentTo_Key]\n      ,[AgencyName] as [AgencySentTo]\n      ,[AcceptsNotificationfromWorkSafe] as [AgencySentTo_AcceptsNotificationFromWorkSafe]\n      ,[SendsNotificationtoWorkSafe] as  [AgencySentTo_SendsNotificationToWorkSafe]\n      ,[AgencyResponsibility] as [AgencySentTo_Responsibility]\n      ,[ExternalAgencyID] as [AgencySentTo_ExternalAgencyID]\n      ,[NonBusinessKeyHash]\n      ,[BusinessKeyHash]\n      ,[RunID]\n      ,[RowIsCurrent]\n      ,[RowValidFrom]\n      ,[RowValidTo]\n      ,[RawFilePath]\n  FROM [@{pipeline().parameters.DataMart_SchemaName}].[Dim_External_Agency];",
+								"type": "Expression"
+							}
+						}
+					],
+					"scriptBlockExecutionTimeout": "02:00:00"
+				}
+			},
+			{
+				"name": "Create Dim_OfficeAllocatedTo",
+				"type": "Script",
+				"dependsOn": [
+					{
+						"activity": "Drop Dim_OfficeAllocatedTo",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"linkedServiceName": {
+					"referenceName": "Azure-Synapse-WorkspaceDefaultSqlServer",
+					"type": "LinkedServiceReference",
+					"parameters": {
+						"DBName": {
+							"value": "@pipeline().parameters.ASA_DBName",
+							"type": "Expression"
+						},
+						"Servername": {
+							"value": "@pipeline().parameters.ASA_ServerName",
+							"type": "Expression"
+						}
+					}
+				},
+				"typeProperties": {
+					"scripts": [
+						{
+							"type": "Query",
+							"text": {
+								"value": "CREATE or Alter  View   [@{pipeline().parameters.DataMart_SchemaName}].[Dim_OfficeAllocatedTo] as \nSELECT [DLDim_OfficeKey] as [AllocatedOffice_Key]\n      ,[OfficeName] as [AllocatedOffice]\n      ,[AreaName] as [AllocatedOffice_Area]\n      ,[AssociatedQueueName] as [AllocatedOffice_AssociatedQueueName]\n      ,[OfficeID] as [AllocatedOffice_ID]\n      ,[AreaID] as [AllocatedOffice_AreaID]\n      ,[OfficeQueueID] as[AllocatedOffice_QueueID]\n\t  ,[NonBusinessKeyHash]\n      ,[BusinessKeyHash]\n      ,[RunID]\n      ,[RowIsCurrent]\n      ,[RowValidFrom]\n      ,[RowValidTo]\n      ,[RawFilePath]\n  FROM [@{pipeline().parameters.DataMart_SchemaName}].[Dim_Office];",
+								"type": "Expression"
+							}
+						}
+					],
+					"scriptBlockExecutionTimeout": "02:00:00"
+				}
+			},
+			{
+				"name": "Create Dim_Previous_Notification_Outcome_Reason",
+				"type": "Script",
+				"dependsOn": [
+					{
+						"activity": "Drop Dim_Previous_Notification_Outcome_Reason",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"linkedServiceName": {
+					"referenceName": "Azure-Synapse-WorkspaceDefaultSqlServer",
+					"type": "LinkedServiceReference",
+					"parameters": {
+						"DBName": {
+							"value": "@pipeline().parameters.ASA_DBName",
+							"type": "Expression"
+						},
+						"Servername": {
+							"value": "@pipeline().parameters.ASA_ServerName",
+							"type": "Expression"
+						}
+					}
+				},
+				"typeProperties": {
+					"scripts": [
+						{
+							"type": "Query",
+							"text": {
+								"value": "CREATE  or alter  View [@{pipeline().parameters.DataMart_SchemaName}].[Dim_Previous_Notification_Outcome_Reason] as \nSELECT [DLDim_Notification_Outcome_ReasonKey] as [Notification_Previous_Outcome_Reason_Key]\n      ,[NotificationOutcomeReason] as [Notification_Previous_Outcome_Reason]\n      ,[NotificationOutcomeReasonID] as [Notification_PreviousOutcome_Reason_ID]\n      ,[NonBusinessKeyHash]\n      ,[BusinessKeyHash]\n      ,[RunID]\n      ,[RowIsCurrent]\n      ,[RowValidFrom]\n      ,[RowValidTo]\n      ,[RawFilePath]\n  FROM [@{pipeline().parameters.DataMart_SchemaName}].[Dim_Notification_Outcome_Reason];",
+								"type": "Expression"
+							}
+						}
+					],
+					"scriptBlockExecutionTimeout": "02:00:00"
+				}
+			},
+			{
+				"name": "Dim_Previous_Notification_Outcome",
+				"type": "Script",
+				"dependsOn": [
+					{
+						"activity": "Drop Dim_Previous_Notification_Outcome",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"linkedServiceName": {
+					"referenceName": "Azure-Synapse-WorkspaceDefaultSqlServer",
+					"type": "LinkedServiceReference",
+					"parameters": {
+						"DBName": {
+							"value": "@pipeline().parameters.ASA_DBName",
+							"type": "Expression"
+						},
+						"Servername": {
+							"value": "@pipeline().parameters.ASA_ServerName",
+							"type": "Expression"
+						}
+					}
+				},
+				"typeProperties": {
+					"scripts": [
+						{
+							"type": "Query",
+							"text": {
+								"value": "CREATE or alter View  [@{pipeline().parameters.DataMart_SchemaName}].[Dim_Previous_Notification_Outcome] as \nSELECT [DLDim_Notification_OutcomeKey] as  [Notification_Previous_Outcome_Key]\n      ,[NotificationOutcome] as [Notification_Previous_Outcome]\n      ,[NotificationOutcomeID] AS [Notification_Previous_Outcome_ID]\n      ,[NonBusinessKeyHash]\n      ,[BusinessKeyHash]\n      ,[RunID]\n      ,[RowIsCurrent]\n      ,[RowValidFrom]\n      ,[RowValidTo]\n      ,[RawFilePath]\n  FROM [@{pipeline().parameters.DataMart_SchemaName}].[Dim_Notification_Outcome];",
+								"type": "Expression"
+							}
+						}
+					],
+					"scriptBlockExecutionTimeout": "02:00:00"
+				}
+			},
+			{
+				"name": "Create Dim_SendFatalNotificationTo",
+				"type": "Script",
+				"dependsOn": [
+					{
+						"activity": "Drop Dim_SendFatalNotificationTo",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"linkedServiceName": {
+					"referenceName": "Azure-Synapse-WorkspaceDefaultSqlServer",
+					"type": "LinkedServiceReference",
+					"parameters": {
+						"DBName": {
+							"value": "@pipeline().parameters.ASA_DBName",
+							"type": "Expression"
+						},
+						"Servername": {
+							"value": "@pipeline().parameters.ASA_ServerName",
+							"type": "Expression"
+						}
+					}
+				},
+				"typeProperties": {
+					"scripts": [
+						{
+							"type": "Query",
+							"text": {
+								"value": "CREATE or alter View [@{pipeline().parameters.DataMart_SchemaName}].[Dim_SendFatalNotificationTo] as \nSELECT [DLDim_OfficeKey] as [FatalNotificationSentTo_Key]\n      ,[OfficeName] as [FatalNotificationSentTo]\n      ,[AreaName] as [FatalNotificationSentTo_Area]\n      ,[AssociatedQueueName] as [FatalNotificationSentTo_AssociatedQueueName]\n      ,[OfficeID] as  [FatalNotificationSentTo_ID]\n      ,[AreaID] as [FatalNotificationSentTo_AreaID]\n      ,[OfficeQueueID] as [FatalNotificationSentTo_QueueID]\n      ,[NonBusinessKeyHash]\n      ,[BusinessKeyHash]\n      ,[RunID]\n      ,[RowIsCurrent]\n      ,[RowValidFrom]\n      ,[RowValidTo]\n      ,[RawFilePath]\n  FROM [@{pipeline().parameters.DataMart_SchemaName}].[Dim_Office];",
+								"type": "Expression"
+							}
+						}
+					],
+					"scriptBlockExecutionTimeout": "02:00:00"
+				}
+			},
+			{
+				"name": "Dim_PrimaryParty",
+				"type": "Script",
+				"dependsOn": [
+					{
+						"activity": "Drop Dim_PrimaryParty",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"linkedServiceName": {
+					"referenceName": "Azure-Synapse-WorkspaceDefaultSqlServer",
+					"type": "LinkedServiceReference",
+					"parameters": {
+						"DBName": {
+							"value": "@pipeline().parameters.ASA_DBName",
+							"type": "Expression"
+						},
+						"Servername": {
+							"value": "@pipeline().parameters.ASA_ServerName",
+							"type": "Expression"
+						}
+					}
+				},
+				"typeProperties": {
+					"scripts": [
+						{
+							"type": "Query",
+							"text": {
+								"value": "CREATE or alter  View   [@{pipeline().parameters.DataMart_SchemaName}].[Dim_PrimaryParty] as \nSELECT [DLDim_ContactKey] as [PrimaryParty_Key]\n      ,[ContactId] as [PrimaryParty_ID]\n      ,[FullName] as [PrimaryParty]\n      ,[City] as [PrimaryParty_City]\n      ,[State] as [PrimaryParty_City_State]\n      ,[LastSuccessfulLogin] as [PrimaryParty_LastSuccessfulLogin]\n      ,[LastDateIncludedinCampaign]  as [PrimaryParty_LastDateIncludedInCampaign]\n      ,[OrganizationName]\n      ,[BusinessID]\n      ,[CreatedDate]\n      ,[ModifiedDate]\n      ,[CreatedBy]\n      ,[ModifiedBy]\n      ,[NonBusinessKeyHash]\n      ,[BusinessKeyHash]\n      ,[RunID]\n      ,[RowIsCurrent]\n      ,[RowValidFrom]\n      ,[RowValidTo]\n      ,[RawFilePath]\n  FROM [@{pipeline().parameters.DataMart_SchemaName}].[Dim_Contact] where [Status]='Active';\n  ",
+								"type": "Expression"
+							}
+						}
+					],
+					"scriptBlockExecutionTimeout": "02:00:00"
+				}
+			},
+			{
+				"name": "Drop Dim_AgencyReceivedFrom",
+				"type": "Script",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"linkedServiceName": {
+					"referenceName": "Azure-Synapse-WorkspaceDefaultSqlServer",
+					"type": "LinkedServiceReference",
+					"parameters": {
+						"DBName": {
+							"value": "@pipeline().parameters.ASA_DBName",
+							"type": "Expression"
+						},
+						"Servername": {
+							"value": "@pipeline().parameters.ASA_ServerName",
+							"type": "Expression"
+						}
+					}
+				},
+				"typeProperties": {
+					"scripts": [
+						{
+							"type": "Query",
+							"text": {
+								"value": "DROP view IF EXISTS [@{pipeline().parameters.DataMart_SchemaName}].[Dim_AgencyReceivedFrom];\n",
+								"type": "Expression"
+							}
+						}
+					],
+					"scriptBlockExecutionTimeout": "02:00:00"
+				}
+			},
+			{
+				"name": "Drop Dim_AgencySentTo",
+				"type": "Script",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"linkedServiceName": {
+					"referenceName": "Azure-Synapse-WorkspaceDefaultSqlServer",
+					"type": "LinkedServiceReference",
+					"parameters": {
+						"DBName": {
+							"value": "@pipeline().parameters.ASA_DBName",
+							"type": "Expression"
+						},
+						"Servername": {
+							"value": "@pipeline().parameters.ASA_ServerName",
+							"type": "Expression"
+						}
+					}
+				},
+				"typeProperties": {
+					"scripts": [
+						{
+							"type": "Query",
+							"text": {
+								"value": "DROP view IF EXISTS [@{pipeline().parameters.DataMart_SchemaName}].[Dim_AgencySentTo]\n",
+								"type": "Expression"
+							}
+						}
+					],
+					"scriptBlockExecutionTimeout": "02:00:00"
+				}
+			},
+			{
+				"name": "Drop Dim_OfficeAllocatedTo",
+				"type": "Script",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"linkedServiceName": {
+					"referenceName": "Azure-Synapse-WorkspaceDefaultSqlServer",
+					"type": "LinkedServiceReference",
+					"parameters": {
+						"DBName": {
+							"value": "@pipeline().parameters.ASA_DBName",
+							"type": "Expression"
+						},
+						"Servername": {
+							"value": "@pipeline().parameters.ASA_ServerName",
+							"type": "Expression"
+						}
+					}
+				},
+				"typeProperties": {
+					"scripts": [
+						{
+							"type": "Query",
+							"text": {
+								"value": "DROP view IF EXISTS [@{pipeline().parameters.DataMart_SchemaName}].Dim_OfficeAllocatedTo\n",
+								"type": "Expression"
+							}
+						}
+					],
+					"scriptBlockExecutionTimeout": "02:00:00"
+				}
+			},
+			{
+				"name": "Drop Dim_Previous_Notification_Outcome_Reason",
+				"type": "Script",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"linkedServiceName": {
+					"referenceName": "Azure-Synapse-WorkspaceDefaultSqlServer",
+					"type": "LinkedServiceReference",
+					"parameters": {
+						"DBName": {
+							"value": "@pipeline().parameters.ASA_DBName",
+							"type": "Expression"
+						},
+						"Servername": {
+							"value": "@pipeline().parameters.ASA_ServerName",
+							"type": "Expression"
+						}
+					}
+				},
+				"typeProperties": {
+					"scripts": [
+						{
+							"type": "Query",
+							"text": {
+								"value": "DROP view IF EXISTS [@{pipeline().parameters.DataMart_SchemaName}].[Dim_Previous_Notification_Outcome_Reason]\n",
+								"type": "Expression"
+							}
+						}
+					],
+					"scriptBlockExecutionTimeout": "02:00:00"
+				}
+			},
+			{
+				"name": "Drop Dim_Previous_Notification_Outcome",
+				"type": "Script",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"linkedServiceName": {
+					"referenceName": "Azure-Synapse-WorkspaceDefaultSqlServer",
+					"type": "LinkedServiceReference",
+					"parameters": {
+						"DBName": {
+							"value": "@pipeline().parameters.ASA_DBName",
+							"type": "Expression"
+						},
+						"Servername": {
+							"value": "@pipeline().parameters.ASA_ServerName",
+							"type": "Expression"
+						}
+					}
+				},
+				"typeProperties": {
+					"scripts": [
+						{
+							"type": "Query",
+							"text": {
+								"value": "DROP view IF EXISTS [@{pipeline().parameters.DataMart_SchemaName}].[Dim_Previous_Notification_Outcome]\n",
+								"type": "Expression"
+							}
+						}
+					],
+					"scriptBlockExecutionTimeout": "02:00:00"
+				}
+			},
+			{
+				"name": "Drop Dim_SendFatalNotificationTo",
+				"type": "Script",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"linkedServiceName": {
+					"referenceName": "Azure-Synapse-WorkspaceDefaultSqlServer",
+					"type": "LinkedServiceReference",
+					"parameters": {
+						"DBName": {
+							"value": "@pipeline().parameters.ASA_DBName",
+							"type": "Expression"
+						},
+						"Servername": {
+							"value": "@pipeline().parameters.ASA_ServerName",
+							"type": "Expression"
+						}
+					}
+				},
+				"typeProperties": {
+					"scripts": [
+						{
+							"type": "Query",
+							"text": {
+								"value": "DROP view IF EXISTS [@{pipeline().parameters.DataMart_SchemaName}].[Dim_SendFatalNotificationTo]\n",
+								"type": "Expression"
+							}
+						}
+					],
+					"scriptBlockExecutionTimeout": "02:00:00"
+				}
+			},
+			{
+				"name": "Drop Dim_PrimaryParty",
+				"type": "Script",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"linkedServiceName": {
+					"referenceName": "Azure-Synapse-WorkspaceDefaultSqlServer",
+					"type": "LinkedServiceReference",
+					"parameters": {
+						"DBName": {
+							"value": "@pipeline().parameters.ASA_DBName",
+							"type": "Expression"
+						},
+						"Servername": {
+							"value": "@pipeline().parameters.ASA_ServerName",
+							"type": "Expression"
+						}
+					}
+				},
+				"typeProperties": {
+					"scripts": [
+						{
+							"type": "Query",
+							"text": {
+								"value": "DROP view IF EXISTS [@{pipeline().parameters.DataMart_SchemaName}].[Dim_PrimaryParty]\n",
+								"type": "Expression"
+							}
+						}
+					],
+					"scriptBlockExecutionTimeout": "02:00:00"
+				}
+			}
+		],
+		"parameters": {
+			"ASA_DBName": {
+				"type": "string",
+				"defaultValue": "Notification_DataMart"
+			},
+			"ASA_ServerName": {
+				"type": "string",
+				"defaultValue": "ws-ent-synapseworkspace-dev-002-ondemand.sql.azuresynapse.net"
+			},
+			"DataMart_SchemaName": {
+				"type": "string",
+				"defaultValue": "Notification"
+			}
+		},
+		"folder": {
+			"name": "Notification_DataMart/1 Pl_Load_CuratedFolder"
+		},
+		"annotations": []
+	}
+}

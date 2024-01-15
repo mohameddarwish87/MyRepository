@@ -1,0 +1,264 @@
+{
+	"name": "1_1 Check Each Table",
+	"properties": {
+		"activities": [
+			{
+				"name": "Get List of Tables",
+				"type": "GetMetadata",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "AzureBlobStorage_Binary_Azure",
+						"type": "DatasetReference",
+						"parameters": {
+							"RelativePath": {
+								"value": "@pipeline().parameters.RelativePath",
+								"type": "Expression"
+							},
+							"FileName": {
+								"value": "@coalesce(null)",
+								"type": "Expression"
+							},
+							"StorageAccountContainerName": {
+								"value": "@pipeline().parameters.StorageAccountContainerName",
+								"type": "Expression"
+							}
+						}
+					},
+					"fieldList": [
+						"childItems"
+					],
+					"storeSettings": {
+						"type": "AzureBlobFSReadSettings",
+						"recursive": true,
+						"enablePartitionDiscovery": false
+					},
+					"formatSettings": {
+						"type": "BinaryReadSettings"
+					}
+				}
+			},
+			{
+				"name": "ForEach Table",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "Get List of Tables",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('Get List of Tables').output.childItems",
+						"type": "Expression"
+					},
+					"isSequential": false,
+					"activities": [
+						{
+							"name": "Get Folder Metadata",
+							"type": "WebActivity",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"url": {
+									"value": "@concat(pipeline().parameters.DataLakeBlobStorageURL,pipeline().parameters.StorageAccountContainerName,'/',pipeline().parameters.RelativePath,'/',item().name)",
+									"type": "Expression"
+								},
+								"connectVia": {
+									"referenceName": "AutoResolveIntegrationRuntime",
+									"type": "IntegrationRuntimeReference"
+								},
+								"method": "GET",
+								"headers": {
+									"x-ms-version": "2020-10-02"
+								},
+								"authentication": {
+									"type": "MSI",
+									"resource": "https://storage.azure.com/"
+								}
+							}
+						},
+						{
+							"name": "Check if watermark col is blank",
+							"description": "",
+							"type": "IfCondition",
+							"dependsOn": [
+								{
+									"activity": "Get Folder Metadata",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"expression": {
+									"value": "@or(equals(length(activity('Get Folder Metadata').output.ADFWebActivityResponseHeaders['x-ms-meta-watermarkcol']),0),equals(activity('Get Folder Metadata').output.ADFWebActivityResponseHeaders['x-ms-meta-watermarkcol'],'Null'))",
+									"type": "Expression"
+								},
+								"ifFalseActivities": [
+									{
+										"name": "Execute Incremental Load",
+										"type": "ExecutePipeline",
+										"dependsOn": [],
+										"userProperties": [],
+										"typeProperties": {
+											"pipeline": {
+												"referenceName": "1_2 Incremental Load",
+												"type": "PipelineReference"
+											},
+											"waitOnCompletion": true,
+											"parameters": {
+												"DataLakeBlobStorageURL": {
+													"value": "@pipeline().parameters.DataLakeBlobStorageURL",
+													"type": "Expression"
+												},
+												"RelativePath": {
+													"value": "@{pipeline().parameters.RelativePath}/@{item().name}",
+													"type": "Expression"
+												},
+												"WatermarkColIsBlank": {
+													"value": "@or(equals(length(activity('Get Folder Metadata').output.ADFWebActivityResponseHeaders['x-ms-meta-watermarkcol']),0),equals(activity('Get Folder Metadata').output.ADFWebActivityResponseHeaders['x-ms-meta-watermarkcol'],'Null'))",
+													"type": "Expression"
+												},
+												"LastWatermark": {
+													"value": "@activity('Get Folder Metadata').output.ADFWebActivityResponseHeaders['x-ms-meta-lastwatermark']",
+													"type": "Expression"
+												},
+												"TableName": {
+													"value": "@replace(item().name,'dbo_','')",
+													"type": "Expression"
+												},
+												"TableSchema": "dbo",
+												"WatermarkCol": {
+													"value": "@activity('Get Folder Metadata').output.ADFWebActivityResponseHeaders['x-ms-meta-watermarkcol']",
+													"type": "Expression"
+												},
+												"StorageAccountContainerName": {
+													"value": "@pipeline().parameters.StorageAccountContainerName",
+													"type": "Expression"
+												},
+												"DBName": {
+													"value": "@pipeline().parameters.DatabaseName",
+													"type": "Expression"
+												},
+												"ServerName": {
+													"value": "@pipeline().parameters.Servername",
+													"type": "Expression"
+												}
+											}
+										}
+									}
+								],
+								"ifTrueActivities": [
+									{
+										"name": "Execute Ingestion Pipeline for Full Load",
+										"type": "ExecutePipeline",
+										"dependsOn": [],
+										"userProperties": [],
+										"typeProperties": {
+											"pipeline": {
+												"referenceName": "2 Ingestion Pipelines",
+												"type": "PipelineReference"
+											},
+											"waitOnCompletion": false,
+											"parameters": {
+												"RelativePath": {
+													"value": "@{pipeline().parameters.RelativePath}/@{item().name}",
+													"type": "Expression"
+												},
+												"WatermarkColIsBlank": {
+													"value": "@or(equals(length(activity('Get Folder Metadata').output.ADFWebActivityResponseHeaders['x-ms-meta-watermarkcol']),0),equals(activity('Get Folder Metadata').output.ADFWebActivityResponseHeaders['x-ms-meta-watermarkcol'],'Null'))",
+													"type": "Expression"
+												},
+												"TableName": {
+													"value": "@replace(item().name,substring(item().name,0,add(indexOf(item().name,'_'),1)),'')",
+													"type": "Expression"
+												},
+												"TableSchema": {
+													"value": "@array(split(item().name,'_'))[0]",
+													"type": "Expression"
+												},
+												"WatermarkCol": {
+													"value": "@activity('Get Folder Metadata').output.ADFWebActivityResponseHeaders['x-ms-meta-watermarkcol']",
+													"type": "Expression"
+												},
+												"NewWatermark": {
+													"value": "@utcNow()",
+													"type": "Expression"
+												},
+												"DataLakeBlobStorageURL": {
+													"value": "@pipeline().parameters.DataLakeBlobStorageURL",
+													"type": "Expression"
+												},
+												"StorageAccountContainerName": {
+													"value": "@pipeline().parameters.StorageAccountContainerName",
+													"type": "Expression"
+												},
+												"LastWatermark": {
+													"value": "@activity('Get Folder Metadata').output.ADFWebActivityResponseHeaders['x-ms-meta-lastwatermark']",
+													"type": "Expression"
+												},
+												"DatabaseName": {
+													"value": "@pipeline().parameters.DatabaseName",
+													"type": "Expression"
+												},
+												"Servername": {
+													"value": "@pipeline().parameters.Servername",
+													"type": "Expression"
+												}
+											}
+										}
+									}
+								]
+							}
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"RelativePath": {
+				"type": "string",
+				"defaultValue": "DataverseTest"
+			},
+			"StorageAccountContainerName": {
+				"type": "string",
+				"defaultValue": "landing"
+			},
+			"DatabaseName": {
+				"type": "string",
+				"defaultValue": "dataverse_wsdttest_unq3f0c71de29f842399d828201e1474"
+			},
+			"Servername": {
+				"type": "string",
+				"defaultValue": "ws-ent-synapseworkspace-dev-001-ondemand.sql.azuresynapse.net"
+			},
+			"DataLakeBlobStorageURL": {
+				"type": "string"
+			}
+		},
+		"folder": {
+			"name": "2b Generic Ingestion Pipeline"
+		},
+		"annotations": []
+	}
+}

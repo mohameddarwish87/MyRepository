@@ -1,0 +1,46 @@
+{
+	"name": "Pl_Persist_To_Curated",
+	"properties": {
+		"activities": [
+			{
+				"name": "Load Dim",
+				"type": "ExecutePipeline",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "Pl_Persist_Dim_Staging",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true
+				}
+			},
+			{
+				"name": "Load Fact",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "Load Dim",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "Pl_Persist_Fact_Staging",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true
+				}
+			}
+		],
+		"folder": {
+			"name": "ZZ Pl Template/3 Persist Staging Output to Curated Zone"
+		},
+		"annotations": [],
+		"lastPublishTime": "2022-10-05T03:05:39Z"
+	},
+	"type": "Microsoft.Synapse/workspaces/pipelines"
+}

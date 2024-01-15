@@ -1,0 +1,29 @@
+{
+	"name": "Create Views",
+	"properties": {
+		"activities": [
+			{
+				"name": "Create Pipelines",
+				"type": "ExecutePipeline",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "2 For Each Table",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"SourceFolderPath": "DataverseTest",
+						"DatabaseName": "ws-ent-syn-serverlessdb-001",
+						"StorageAccountContainerName": "staging"
+					}
+				}
+			}
+		],
+		"folder": {
+			"name": "ZZ Pl Template"
+		},
+		"annotations": []
+	}
+}

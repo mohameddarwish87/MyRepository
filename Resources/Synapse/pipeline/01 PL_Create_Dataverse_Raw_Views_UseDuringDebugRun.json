@@ -1,0 +1,144 @@
+{
+	"name": "01 PL_Create_Dataverse_Raw_Views_UseDuringDebugRun",
+	"properties": {
+		"activities": [
+			{
+				"name": "LKP_all_DT_Tables",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderQuery": {
+							"value": "@concat('SELECT Table_Name FROM ',pipeline().parameters.Dataverse_DBName,' .INFORMATION_SCHEMA.TABLES\nWHERE Table_type=''BASE TABLE''')",
+							"type": "Expression"
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "Ds_ASA_DMP",
+						"type": "DatasetReference",
+						"parameters": {
+							"pm_DBName": {
+								"value": "@pipeline().parameters.Dataverse_DBName",
+								"type": "Expression"
+							},
+							"pm_ServerName": {
+								"value": "@pipeline().parameters.Dataverse_ServerName",
+								"type": "Expression"
+							}
+						}
+					},
+					"firstRowOnly": false
+				}
+			},
+			{
+				"name": "Load Raw Table as External view",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "LKP_all_DT_Tables",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('LKP_all_DT_Tables').output.value",
+						"type": "Expression"
+					},
+					"isSequential": false,
+					"activities": [
+						{
+							"name": "Create Raw Views",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[dbo].[SP_Automatic_RawViews]",
+								"storedProcedureParameters": {
+									"Table_Name": {
+										"value": {
+											"value": "@item().Table_Name",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"ADLS_Folder": {
+										"value": {
+											"value": "@pipeline().parameters.RelativePath",
+											"type": "Expression"
+										},
+										"type": "String"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "Azure-Synapse-WorkspaceDefaultSqlServer",
+								"type": "LinkedServiceReference",
+								"parameters": {
+									"DBName": {
+										"value": "@pipeline().parameters.ASA_Database",
+										"type": "Expression"
+									},
+									"Servername": {
+										"value": "@pipeline().parameters.ASA_ServerName",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"Dataverse_DBName": {
+				"type": "String",
+				"defaultValue": "dataverse_wsdttest_unq3f0c71de29f842399d828201e1474"
+			},
+			"StorageContainerName": {
+				"type": "string",
+				"defaultValue": "staging"
+			},
+			"RelativePath": {
+				"type": "string",
+				"defaultValue": "DataverseTest"
+			},
+			"ASA_Database": {
+				"type": "string",
+				"defaultValue": "ws-ent-syn-serverlessdb-001"
+			},
+			"ASA_ServerName": {
+				"type": "string",
+				"defaultValue": "ws-ent-synapseworkspace-dev-002-ondemand.sql.azuresynapse.net"
+			},
+			"Dataverse_ServerName": {
+				"type": "string",
+				"defaultValue": "ws-ent-syn-dmplz-dev-004-ondemand.sql.azuresynapse.net"
+			}
+		},
+		"folder": {
+			"name": "ZZ Pl Template/Auto Create Views"
+		},
+		"annotations": []
+	}
+}

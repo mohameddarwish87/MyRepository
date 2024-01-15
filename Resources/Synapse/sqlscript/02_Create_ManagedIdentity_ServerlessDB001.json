@@ -1,0 +1,20 @@
+{
+	"name": "02_Create_ManagedIdentity_ServerlessDB001",
+	"properties": {
+		"folder": {
+			"name": "ws-ent-syn-serverlessdb-001"
+		},
+		"content": {
+			"query": "/*Use [ws-ent-syn-serverlessdb-001]\nGO\nCREATE MASTER KEY ENCRYPTION BY PASSWORD='Please enter password here'\ngo\nCREATE DATABASE SCOPED CREDENTIAL ManagedIdentityCredential WITH IDENTITY = 'MANAGED SERVICE IDENTITY'*/\n",
+			"metadata": {
+				"language": "sql"
+			},
+			"currentConnection": {
+				"databaseName": "ws-ent-syn-serverlessdb-001",
+				"poolName": "Built-in"
+			},
+			"resultLimit": 5000
+		},
+		"type": "SqlQuery"
+	}
+}

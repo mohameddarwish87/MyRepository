@@ -1,0 +1,117 @@
+{
+	"name": "3_2 Copy Raw to Exploration Zone",
+	"properties": {
+		"activities": [
+			{
+				"name": "Copy from Datalake Raw to Exploration Zone",
+				"type": "Copy",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "ParquetSource",
+						"storeSettings": {
+							"type": "AzureBlobFSReadSettings",
+							"recursive": true,
+							"wildcardFolderPath": {
+								"value": "@{pipeline().parameters.SourceFolderPath}/@{pipeline().parameters.TableName}/@{pipeline().parameters.LastWatermark}",
+								"type": "Expression"
+							},
+							"wildcardFileName": {
+								"value": "*.parquet",
+								"type": "Expression"
+							},
+							"enablePartitionDiscovery": false
+						}
+					},
+					"sink": {
+						"type": "ParquetSink",
+						"storeSettings": {
+							"type": "AzureBlobFSWriteSettings"
+						},
+						"formatSettings": {
+							"type": "ParquetWriteSettings"
+						}
+					},
+					"enableStaging": false,
+					"translator": {
+						"type": "TabularTranslator",
+						"typeConversion": true,
+						"typeConversionSettings": {
+							"allowDataTruncation": true,
+							"treatBooleanAsNumber": false
+						}
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "AzureBlobStorage_Parquet_Azure",
+						"type": "DatasetReference",
+						"parameters": {
+							"FileName": {
+								"value": "@{pipeline().parameters.TableName}_@{utcNow()}",
+								"type": "Expression"
+							},
+							"RelativePath": {
+								"value": "@pipeline().parameters.SourceFolderPath",
+								"type": "Expression"
+							},
+							"StorageAccountContainerName": {
+								"value": "@pipeline().parameters.StorageAccountContainerName",
+								"type": "Expression"
+							}
+						}
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "AzureBlobStorage_Parquet_Azure",
+						"type": "DatasetReference",
+						"parameters": {
+							"FileName": {
+								"value": "@{pipeline().parameters.TableName}_@{utcNow()}",
+								"type": "Expression"
+							},
+							"RelativePath": {
+								"value": "@{pipeline().parameters.ExplorationZonePath}/@{pipeline().parameters.TableName}/@{pipeline().parameters.LastWatermark}",
+								"type": "Expression"
+							},
+							"StorageAccountContainerName": {
+								"value": "@pipeline().parameters.StorageAccountContainerName",
+								"type": "Expression"
+							}
+						}
+					}
+				]
+			}
+		],
+		"parameters": {
+			"ExplorationZonePath": {
+				"type": "string"
+			},
+			"LastWatermark": {
+				"type": "string"
+			},
+			"SourceFolderPath": {
+				"type": "string"
+			},
+			"TableName": {
+				"type": "string"
+			},
+			"StorageAccountContainerName": {
+				"type": "string"
+			}
+		},
+		"folder": {
+			"name": "ZZ Pl Template/9 Copy to Zone Pipelines"
+		},
+		"annotations": []
+	}
+}

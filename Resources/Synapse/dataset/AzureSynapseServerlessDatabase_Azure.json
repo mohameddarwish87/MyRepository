@@ -1,0 +1,23 @@
+{
+	"name": "AzureSynapseServerlessDatabase_Azure",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "ws-ent-syn-dmp-dev-004-WorkspaceDefaultSqlServer",
+			"type": "LinkedServiceReference",
+			"parameters": {
+				"DBName": {
+					"value": "@dataset().DBName",
+					"type": "Expression"
+				}
+			}
+		},
+		"parameters": {
+			"DBName": {
+				"type": "string"
+			}
+		},
+		"annotations": [],
+		"type": "AzureSqlDWTable",
+		"schema": []
+	}
+}

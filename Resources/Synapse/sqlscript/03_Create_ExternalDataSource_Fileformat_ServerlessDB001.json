@@ -1,0 +1,20 @@
+{
+	"name": "03_Create_ExternalDataSource_Fileformat_ServerlessDB001",
+	"properties": {
+		"folder": {
+			"name": "ws-ent-syn-serverlessdb-001"
+		},
+		"content": {
+			"query": "/*Use [ws-ent-syn-serverlessdb-001]\nGO\nCREATE EXTERNAL DATA SOURCE [dls-stage-ManagedIdentity] WITH (LOCATION = N'abfss://staging@wsentdatalakedev002.dfs.core.windows.net',\nCREDENTIAL = [ManagedIdentityCredential])\nGO\nCREATE EXTERNAL FILE FORMAT [SynapseParquetFormat] WITH (FORMAT_TYPE = PARQUET) \nGO */\n\n\n",
+			"metadata": {
+				"language": "sql"
+			},
+			"currentConnection": {
+				"databaseName": "ws-ent-syn-serverlessdb-001",
+				"poolName": "Built-in"
+			},
+			"resultLimit": 5000
+		},
+		"type": "SqlQuery"
+	}
+}

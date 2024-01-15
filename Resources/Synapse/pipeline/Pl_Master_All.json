@@ -1,0 +1,52 @@
+{
+	"name": "Pl_Master_All",
+	"properties": {
+		"activities": [
+			{
+				"name": "Load Dim",
+				"type": "ExecutePipeline",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "Pl_Master_Dim_StagingToLanding",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"MainCuratedFolder": "Notification_DataMart",
+						"DBName": "ws-ent-syn-serverlessdb-001"
+					}
+				}
+			},
+			{
+				"name": "Load Fact",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "Load Dim",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "Pl_Master_Fact_StagingToLanding",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"MainCuratedFolder": "Notification_DataMart",
+						"DBName": "ws-ent-syn-serverlessdb-001"
+					}
+				}
+			}
+		],
+		"folder": {
+			"name": "ZZ Pl Template"
+		},
+		"annotations": []
+	}
+}

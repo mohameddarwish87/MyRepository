@@ -1,0 +1,20 @@
+{
+	"name": "dbo_SP_LoadDim_Breach_Type",
+	"properties": {
+		"folder": {
+			"name": "ws-ent-syn-serverlessdb-001/StoredProcedure"
+		},
+		"content": {
+			"query": "/****** Object:  StoredProcedure [dbo].[SP_LoadDim_Breach_Type]    Script Date: 12/22/2022 5:00:19 AM ******/\nSET ANSI_NULLS ON\nGO\n\nSET QUOTED_IDENTIFIER ON\nGO\n\n\nCREATE or Alter  PROCEDURE [dbo].[SP_LoadDim_Breach_Type]\n\n( @GetNewWaterMark bit=0,@RowValidFrom Datetime2(7)='1900-01-01 00:00:00.0000000'\n)\nAS\n\tBegin \n\tIF @GetNewWaterMark>0\n\tBEGIN\n\tSELECT isnull(max(RowValidFrom),@RowValidFrom) AS RowValidFrom\n\t\t\tFROM [dbo].ws_typeofbreach A\n\t\t\tWHERE CAST(RowValidFrom As datetime2(7))>@RowValidFrom\n\tEND\n\tELSE\nWITH CTE AS (\nSELECT \n\t  A.ws_typeofbreachid       AS [BreachTypeID],\n      A.ws_name                 AS [BreachType],\n        b.localizedlabel        AS  [Status],\n       C.localizedlabel        AS  [StatusReason]\n       ,convert(datetimeoffset,A.[modifiedon]) as\t[ModifiedDate]\n       ,convert(datetimeoffset,A.[createdon]) as\t[CreatedDate]\n\t   ,A.createdbyname as\t[CreatedBy]\n\t   ,A.modifiedbyname\t\t[ModifiedBy]\n\t   ,ROW_NUMBER()OVER (PARTITION BY A.ID Order by A.versionnumber DESC) AS ROW_RUM\n\t   ,a.RowValidFrom,a.RowValidTo,a.RowIsCurrent    \n       FROM   [dbo].ws_typeofbreach A\n       LEFT JOIN [dbo].[statemetadata] B\n              ON A.statecode = b.state\n                 AND b.entityname = 'ws_typeofbreach'\n\t\t\t\t AND a.RowIsCurrent='true'\n       LEFT JOIN [dbo].statusmetadata C\n              ON A.statuscode = C.status\n\t\t\t  AND C.entityname = 'ws_typeofbreach'\n\t\t\t  AND a.RowIsCurrent='true'\n\t\t\t     WHERE CAST(a.RowValidFrom as datetime2(7)) > @RowValidFrom)\n \t\t \n\n\t\t SELECT \n\t\t --Row_NUMBER() Over (order by [BreachTypeID] desc)+1000 AS Breach_Type_Key\n\t\t [BreachType]\n\t\t,[BreachTypeID]\n\t\t FROM CTE WHERE ROW_RUM=1 and [Status]='Active' and [BreachTypeID] is not null\n\t\t UNION \n\nSELECT \n\nnull,\n'UNKNOWN'\nEND\nGO\n\n\n",
+			"metadata": {
+				"language": "sql"
+			},
+			"currentConnection": {
+				"databaseName": "wsentsynserverlessdb001",
+				"poolName": "Built-in"
+			},
+			"resultLimit": 5000
+		},
+		"type": "SqlQuery"
+	}
+}

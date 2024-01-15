@@ -1,0 +1,10 @@
+{
+	"name": "synapse-ws-sql--ws-ent-syn-dmp-dev-004",
+	"properties": {
+		"privateLinkResourceId": "/subscriptions/601d68db-bf92-4f84-ae2e-fe2d9e72cc15/resourceGroups/ws-ent-rg-dev-004/providers/Microsoft.Synapse/workspaces/ws-ent-syn-dmp-dev-004",
+		"groupId": "sql",
+		"fqdns": [
+			"ws-ent-syn-dmp-dev-004.0eee08d1-b6eb-4ff8-adae-3ff86299b3cf.sql.azuresynapse.net"
+		]
+	}
+}

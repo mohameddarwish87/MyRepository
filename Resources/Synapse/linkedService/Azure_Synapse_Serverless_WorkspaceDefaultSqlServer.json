@@ -1,0 +1,23 @@
+{
+	"name": "Azure_Synapse_Serverless_WorkspaceDefaultSqlServer",
+	"type": "Microsoft.Synapse/workspaces/linkedservices",
+	"properties": {
+		"type": "AzureSqlDW",
+		"connectVia": {
+			"referenceName": "AutoResolveIntegrationRuntime",
+			"type": "IntegrationRuntimeReference"
+		},
+		"parameters": {
+			"DBName": {
+				"type": "string"
+			},
+			"ServerName": {
+				"type": "string"
+			}
+		},
+		"annotations": [],
+		"typeProperties": {
+			"connectionString": "Integrated Security=False;Encrypt=True;Connection Timeout=30;Data Source=@{linkedService().ServerName};Initial Catalog=@{linkedService().DBName}"
+		}
+	}
+}

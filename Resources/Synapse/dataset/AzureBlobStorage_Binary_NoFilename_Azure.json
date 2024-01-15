@@ -1,0 +1,32 @@
+{
+	"name": "AzureBlobStorage_Binary_NoFilename_Azure",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "ws-ent-syn-dmp-dev-004-WorkspaceDefaultStorage",
+			"type": "LinkedServiceReference"
+		},
+		"parameters": {
+			"StorageAccountContainerName": {
+				"type": "string"
+			},
+			"RelativePath": {
+				"type": "string"
+			}
+		},
+		"annotations": [],
+		"type": "Binary",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobFSLocation",
+				"folderPath": {
+					"value": "@dataset().RelativePath",
+					"type": "Expression"
+				},
+				"fileSystem": {
+					"value": "@dataset().StorageAccountContainerName",
+					"type": "Expression"
+				}
+			}
+		}
+	}
+}

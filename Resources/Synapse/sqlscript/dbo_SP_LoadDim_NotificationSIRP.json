@@ -1,0 +1,20 @@
+{
+	"name": "dbo_SP_LoadDim_NotificationSIRP",
+	"properties": {
+		"folder": {
+			"name": "ws-ent-syn-serverlessdb-001/StoredProcedure"
+		},
+		"content": {
+			"query": "CREATE OR ALTER PROCEDURE [dbo].[SP_LoadDim_NotificationSIRP]\n( @GetNewWaterMark bit=0,@RowValidFrom Datetime2(7)='1900-01-01 00:00:00.0000000'\n)\nAS\nBegin \nSET LANGUAGE us_english;\n\n\tIF @GetNewWaterMark>0\t\n    BEGIN\n    SELECT isnull(max(RowValidFrom),@RowValidFrom) AS RowValidFrom\n\t\t\tFROM [dbo].[ws_notification] \n\t\t\tWHERE CAST(RowValidFrom As datetime2(7))>@RowValidFrom\n\tEND\n;WITH CTE_NotificationSIRP\nAS (\nSELECT ws_notificationid AS [NotificationID]\n\t,convert(DATE, ws_dateofsirpstatus) AS [SIRPStatusData]\n\t,CASE \n\t\tWHEN ws_sirp = 741120000\n\t\t\tTHEN 'Sent & On Hold'\n\t\tWHEN ws_sirp = 741120001\n\t\t\tTHEN 'Outcome Resolved'\n\t\tELSE NULL\n\t\tEND AS [SIRPStatus]\n\t,CASE \n\t\tWHEN ws_sirpconsideration = '741120001'\n\t\t\tTHEN 'Educate Industry'\n\t\tWHEN ws_sirpconsideration = '741120002'\n\t\t\tTHEN 'Targeted Complex Intervention'\n\t\tWHEN ws_sirpconsideration = '741120003'\n\t\t\tTHEN 'Advice on enforcement'\n\t\tWHEN ws_sirpconsideration = '741120004'\n\t\t\tTHEN 'Advice on Triage decision'\n\t\tWHEN ws_sirpconsideration = '741120005'\n\t\t\tTHEN 'Information Sharing'\n\t\tELSE NULL\n\t\tEND AS [SIRPConsideration]\n\t,row_number() OVER (\n\t\tPARTITION BY id ORDER BY versionnumber\n\t\t) AS row_num\nFROM [dbo].ws_notification\nWHERE RowIsCurrent='true')\n\nSELECT\n\n\n[SIRPStatusData]\n,[SIRPStatus]\n, [SIRPConsideration]\n,[NotificationID]\nFROM CTE_NotificationSIRP WHERE  ROW_NUM = 1 and NotificationID is not null\n\nUNION \n\nSELECT \nNULL,\nNull,\nNull,\n'UNKNOWN'\nEND\nGO\n\n\n",
+			"metadata": {
+				"language": "sql"
+			},
+			"currentConnection": {
+				"databaseName": "wsentsynserverlessdb001",
+				"poolName": "Built-in"
+			},
+			"resultLimit": 5000
+		},
+		"type": "SqlQuery"
+	}
+}

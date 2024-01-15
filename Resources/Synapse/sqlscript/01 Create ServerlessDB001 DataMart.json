@@ -1,0 +1,20 @@
+{
+	"name": "01 Create ServerlessDB001 DataMart",
+	"properties": {
+		"folder": {
+			"name": "ws-ent-syn-serverlessdb-001"
+		},
+		"content": {
+			"query": "--Create Database [wsentsynserverlessdb001]\n--GO",
+			"metadata": {
+				"language": "sql"
+			},
+			"currentConnection": {
+				"databaseName": "master",
+				"poolName": "Built-in"
+			},
+			"resultLimit": 5000
+		},
+		"type": "SqlQuery"
+	}
+}

@@ -1,0 +1,73 @@
+{
+	"name": "02_PL_Create_CuratedView_UseDuringDebugRun",
+	"properties": {
+		"activities": [
+			{
+				"name": "Create curated Views",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[SP_Automatic_CuratedViews]",
+					"storedProcedureParameters": {
+						"Table_Name": {
+							"value": {
+								"value": "@pipeline().parameters.Table_Name",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"ADLS_Folder": {
+							"value": {
+								"value": "@pipeline().parameters.MainFolderName",
+								"type": "Expression"
+							},
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "Azure-Synapse-WorkspaceDefaultSqlServer",
+					"type": "LinkedServiceReference",
+					"parameters": {
+						"DBName": {
+							"value": "@pipeline().parameters.DBName",
+							"type": "Expression"
+						},
+						"Servername": {
+							"value": "@pipeline().parameters.ServerName",
+							"type": "Expression"
+						}
+					}
+				}
+			}
+		],
+		"parameters": {
+			"DBName": {
+				"type": "string"
+			},
+			"ServerName": {
+				"type": "string"
+			},
+			"MainFolderName": {
+				"type": "string"
+			},
+			"Table_Name": {
+				"type": "string"
+			}
+		},
+		"folder": {
+			"name": "ZZ Pl Template/Auto Create Views"
+		},
+		"annotations": [],
+		"lastPublishTime": "2022-12-16T06:14:33Z"
+	},
+	"type": "Microsoft.Synapse/workspaces/pipelines"
+}

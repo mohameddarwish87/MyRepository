@@ -1,0 +1,24 @@
+{
+	"name": "RefreshingCuratedZone",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "Pl_Master_All",
+					"type": "PipelineReference"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Day",
+				"interval": 1,
+				"startTime": "2022-04-01T19:00:00",
+				"timeZone": "New Zealand Standard Time"
+			}
+		}
+	}
+}

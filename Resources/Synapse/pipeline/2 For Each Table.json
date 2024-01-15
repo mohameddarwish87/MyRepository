@@ -1,0 +1,146 @@
+{
+	"name": "2 For Each Table",
+	"properties": {
+		"activities": [
+			{
+				"name": "Get List Of Tables",
+				"type": "GetMetadata",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "AzureBlobStorage_Binary_Azure",
+						"type": "DatasetReference",
+						"parameters": {
+							"RelativePath": {
+								"value": "@pipeline().parameters.SourceFolderPath",
+								"type": "Expression"
+							},
+							"FileName": {
+								"value": "@coalesce(null)",
+								"type": "Expression"
+							},
+							"StorageAccountContainerName": {
+								"value": "@pipeline().parameters.StorageAccountContainerName",
+								"type": "Expression"
+							}
+						}
+					},
+					"fieldList": [
+						"childItems"
+					],
+					"storeSettings": {
+						"type": "AzureBlobFSReadSettings",
+						"recursive": true,
+						"enablePartitionDiscovery": false
+					},
+					"formatSettings": {
+						"type": "BinaryReadSettings"
+					}
+				}
+			},
+			{
+				"name": "ForEach Table",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "Get List Of Tables",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('Get List Of Tables').output.childItems",
+						"type": "Expression"
+					},
+					"isSequential": false,
+					"activities": [
+						{
+							"name": "Create Views",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "3 Create Automatic Views",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": false,
+								"parameters": {
+									"DatabaseName": {
+										"value": "@pipeline().parameters.DatabaseName",
+										"type": "Expression"
+									},
+									"PathFolderName": {
+										"value": "@pipeline().parameters.SourceFolderPath",
+										"type": "Expression"
+									},
+									"TableSchema": {
+										"value": "@pipeline().parameters.SchemaName",
+										"type": "Expression"
+									},
+									"TableName": {
+										"value": "@item().name",
+										"type": "Expression"
+									},
+									"StorageAccountContainerName": {
+										"value": "@pipeline().parameters.StorageAccountContainerName",
+										"type": "Expression"
+									},
+									"ServerName": {
+										"value": "@pipeline().parameters.ServerName",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "Ingest Dataverse",
+				"type": "ExecutePipeline",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "Ingest Dataverse",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true
+				}
+			}
+		],
+		"parameters": {
+			"SourceFolderPath": {
+				"type": "string"
+			},
+			"DatabaseName": {
+				"type": "string"
+			},
+			"StorageAccountContainerName": {
+				"type": "string"
+			},
+			"ServerName": {
+				"type": "string"
+			},
+			"SchemaName": {
+				"type": "string"
+			}
+		},
+		"folder": {
+			"name": "3 Automatically Create Views"
+		},
+		"annotations": []
+	}
+}

@@ -1,0 +1,3 @@
+spark.synapse.logAnalytics.enabled true
+spark.synapse.logAnalytics.workspaceId 8fa15488-aa2b-46cd-acef-aa015c04f25a
+spark.synapse.logAnalytics.secret pgu5kUPmVh1pUQFoOy1+2mBLU0oedNHAKD5i0ZiC/SaaztG+2G4LKJckJtQW9/40p6hwFImjT8NZeMfRXLMYEw==

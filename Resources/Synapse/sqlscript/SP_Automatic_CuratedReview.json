@@ -1,0 +1,20 @@
+{
+	"name": "SP_Automatic_CuratedReview",
+	"properties": {
+		"folder": {
+			"name": "ws-ent-syn-serverlessdb-001/StoredProcedure"
+		},
+		"content": {
+			"query": "/****** Object:  StoredProcedure [dbo].[SP_Automatic_CuratedView]    Script Date: 12/19/2022 9:24:41 PM ******/\nSET ANSI_NULLS ON\nGO\n\nSET QUOTED_IDENTIFIER ON\nGO\n\n\n\n\n\nCREATE OR ALTER            PROCEDURE [dbo].[SP_Automatic_CuratedView]\n(\n\n    @Table_Name varchar(200)='Dim_Business',\n\t@ADLS_Folder Varchar(200)='Notification_DataMart',\n\t@Schema_Name varchar(50)='Notification',\n\t@File_Format varchar(50)=null,\n\t@Data_Source_Path Nvarchar(max)='https://wsentdatalakedev002.dfs.core.windows.net',--/curated/Notification_DataMart',\n\t@DataLake_Zone varchar(50) ='curated',\n\t@Format_Type varchar(50)='DELTA'\n\t--execute [dbo].[SP_Automatic_CuratedReview] 'Dim_Business','Notification_DataMart'\n\t\n)\nAS\nBEGIN\n  SET NOCOUNT ON\n  \nBegin\n\n\tDeclare @SQLQuery NVARCHAR(MAX)=''\n\n\n\tSET @SQLQuery =\n\t'CREATE OR ALTER VIEW  ' + @Schema_Name+'.'+@Table_Name +' AS\n   SELECT \n  *\n   FROM\n\n       OPENROWSET (\n\t        BULK '+''''+@Data_Source_Path+'/'+@DataLake_Zone+'/'+@ADLS_Folder+'/'+@Table_Name+'/'',\n\t\t  FORMAT = '+''''+@Format_Type+'''\n\t\t  ) AS [result]'\nEXEC  (@SQLQuery)\nEND\nEND\nGO\n\n\n",
+			"metadata": {
+				"language": "sql"
+			},
+			"currentConnection": {
+				"databaseName": "ws-ent-syn-serverlessdb-001",
+				"poolName": "Built-in"
+			},
+			"resultLimit": 5000
+		},
+		"type": "SqlQuery"
+	}
+}

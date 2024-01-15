@@ -1,0 +1,15 @@
+{
+	"name": "Production_Data_Lake_ReadOnly_FromDev",
+	"properties": {
+		"description": "This linked service was created to enable data plane access to production through the dev Synapse Workspace. Used by the DE team.\n\nNOTE THIS IS THE SORTAPROD ENVIRONMENT",
+		"annotations": [],
+		"type": "AzureBlobFS",
+		"typeProperties": {
+			"url": "https://wsentdatalakedev001.dfs.core.windows.net/"
+		},
+		"connectVia": {
+			"referenceName": "AutoResolveIntegrationRuntime",
+			"type": "IntegrationRuntimeReference"
+		}
+	}
+}

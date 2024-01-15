@@ -1,0 +1,20 @@
+{
+	"name": "dbo_SP_LoadDim_Notification_Outcome",
+	"properties": {
+		"folder": {
+			"name": "ws-ent-syn-serverlessdb-001/StoredProcedure"
+		},
+		"content": {
+			"query": "/****** Object:  StoredProcedure [dbo].[SP_LoadDim_Notification_Outcome]    Script Date: 12/22/2022 5:05:42 AM ******/\nSET ANSI_NULLS ON\nGO\n\nSET QUOTED_IDENTIFIER ON\nGO\n\n\nCREATE OR ALTER PROCEDURE [dbo].[SP_LoadDim_Notification_Outcome]\n( @GetNewWaterMark bit=0,@RowValidFrom Datetime2(7)='1900-01-01 00:00:00.0000000'\n)\nAS\nBegin \n\tIF @GetNewWaterMark>0\n\tBEGIN\n\tSELECT isnull(max(RowValidFrom),@RowValidFrom) AS RowValidFrom\n\t\t\tFROM [dbo].[ws_notificationoutcome]\n\t\t\tWHERE CAST(RowValidFrom As datetime2(7))>@RowValidFrom\n\tEND\n\tELSE\nWITH CTE AS (\nSELECT  \n\t[ws_notificationoutcomeid] AS\t[NotificationOutcomeID]\n\t,[ws_name] AS\t\t\t\t\t[NotificationOutcome]\n\t,b.LocalizedLabel AS\t\t\t[Status]\n\t,C.LocalizedLabel AS\t\t\t[StatusReason]\n\t,[IsDelete]\n\t,convert(datetimeoffset,[modifiedon]) as\t[ModifiedDate]\n\t,convert(datetimeoffset,[createdon]) as\t\t[CreatedDate]\n\t,createdbyname as\t[CreatedBy]\n\t,modifiedbyname\t\t[ModifiedBy]\n\t,ROW_NUMBER()OVER (PARTITION BY [ws_notificationoutcomeid] Order by versionnumber DESC) AS ROW_RUM\n\nFROM [dbo].[ws_notificationoutcome] A\n\tLEFT JOIN [dbo].[StateMetadata] B\n\t\t  ON A.statecode=b.State\n\t\t  AND b.EntityName='ws_notificationoutcome'\n\t\t  AND a.RowIsCurrent='true'\n\tLEFT JOIN [dbo].StatusMetadata C\n\t\t  ON A.statuscode=C.Status\n\t\t  AND c.EntityName='ws_notificationoutcome'\n\t\t  AND a.RowIsCurrent='true'\n\t\t  Where [ws_notificationoutcomeid] is not null\n\t\t  AND  CAST(a.RowValidFrom as datetime2(7)) > @RowValidFrom)\n\n\tSELECT \n\t --Row_NUMBER() Over (order by [NotificationOutcomeID] desc)+1000 AS NotificationOutcomeKey\n\t [NotificationOutcome]\n\t,[NotificationOutcomeID]\n\tFROM CTE WHERE ROW_RUM=1 \n\tand status='Active' \n\tand NotificationOutcomeID is not null\n\n\tUNION \n\n\tSELECT \n\n\tNull,\n\t'UNKNOWN'\n\t\n\tEND\nGO\n\n\n",
+			"metadata": {
+				"language": "sql"
+			},
+			"currentConnection": {
+				"databaseName": "wsentsynserverlessdb001",
+				"poolName": "Built-in"
+			},
+			"resultLimit": 5000
+		},
+		"type": "SqlQuery"
+	}
+}

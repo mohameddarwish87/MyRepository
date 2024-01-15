@@ -1,0 +1,162 @@
+{
+	"name": "1_2 Incremental Load",
+	"properties": {
+		"activities": [
+			{
+				"name": "LookupNewWaterMarkActivity",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderQuery": {
+							"value": "select coalesce(MAX(@{pipeline().parameters.WatermarkCol}),'@{pipeline().parameters.LastWatermark}','1900-01-10') as  WatermarkValue\nfrom [@{pipeline().parameters.TableSchema}].[@{pipeline().parameters.TableName}] \nwhere @{pipeline().parameters.WatermarkCol} > '@{pipeline().parameters.LastWatermark}'",
+							"type": "Expression"
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "Ds_ASA_DMP",
+						"type": "DatasetReference",
+						"parameters": {
+							"pm_DBName": {
+								"value": "@pipeline().parameters.DBName",
+								"type": "Expression"
+							},
+							"pm_ServerName": {
+								"value": "@pipeline().parameters.ServerName",
+								"type": "Expression"
+							}
+						}
+					}
+				}
+			},
+			{
+				"name": "NewWatermark matches LastWatermark",
+				"description": "Checks whether NewWatermark (from source) matches LastWatermark metadata on folder. If true, this means that there is no new data to ingest and the \"2 Ingestion Pipeline\" does not need to run",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "LookupNewWaterMarkActivity",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@equals(string(activity('LookupNewWaterMarkActivity').output.firstRow.WatermarkValue),string(pipeline().parameters.LastWatermark))",
+						"type": "Expression"
+					},
+					"ifFalseActivities": [
+						{
+							"name": "Run Ingestion Pipeline",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "2 Ingestion Pipelines",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": false,
+								"parameters": {
+									"RelativePath": {
+										"value": "@pipeline().parameters.RelativePath",
+										"type": "Expression"
+									},
+									"WatermarkColIsBlank": {
+										"value": "@pipeline().parameters.WatermarkColIsBlank",
+										"type": "Expression"
+									},
+									"TableName": {
+										"value": "@pipeline().parameters.TableName",
+										"type": "Expression"
+									},
+									"TableSchema": {
+										"value": "@pipeline().parameters.TableSchema",
+										"type": "Expression"
+									},
+									"WatermarkCol": {
+										"value": "@pipeline().parameters.WatermarkCol",
+										"type": "Expression"
+									},
+									"NewWatermark": {
+										"value": "@activity('LookupNewWaterMarkActivity').output.firstRow.WatermarkValue",
+										"type": "Expression"
+									},
+									"DataLakeBlobStorageURL": {
+										"value": "@pipeline().parameters.DataLakeBlobStorageURL",
+										"type": "Expression"
+									},
+									"StorageAccountContainerName": {
+										"value": "@pipeline().parameters.StorageAccountContainerName",
+										"type": "Expression"
+									},
+									"LastWatermark": {
+										"value": "@pipeline().parameters.LastWatermark",
+										"type": "Expression"
+									},
+									"DatabaseName": {
+										"value": "@pipeline().parameters.DBName",
+										"type": "Expression"
+									},
+									"Servername": {
+										"value": "@pipeline().parameters.ServerName",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"DataLakeBlobStorageURL": {
+				"type": "string"
+			},
+			"RelativePath": {
+				"type": "string"
+			},
+			"WatermarkColIsBlank": {
+				"type": "string"
+			},
+			"LastWatermark": {
+				"type": "string"
+			},
+			"TableName": {
+				"type": "string"
+			},
+			"TableSchema": {
+				"type": "string"
+			},
+			"WatermarkCol": {
+				"type": "string"
+			},
+			"StorageAccountContainerName": {
+				"type": "string"
+			},
+			"DBName": {
+				"type": "string"
+			},
+			"ServerName": {
+				"type": "string"
+			}
+		},
+		"folder": {
+			"name": "2b Generic Ingestion Pipeline"
+		},
+		"annotations": []
+	}
+}

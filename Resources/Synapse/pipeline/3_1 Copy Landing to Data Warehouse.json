@@ -1,0 +1,35 @@
+{
+	"name": "3_1 Copy Landing to Data Warehouse",
+	"properties": {
+		"activities": [
+			{
+				"name": "Fail1",
+				"type": "Fail",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"message": "To Be Implemented",
+					"errorCode": "101"
+				}
+			}
+		],
+		"parameters": {
+			"RelativePath": {
+				"type": "string"
+			},
+			"TableName": {
+				"type": "string"
+			},
+			"TableSchema": {
+				"type": "string"
+			},
+			"WaterMarkValue": {
+				"type": "string"
+			}
+		},
+		"folder": {
+			"name": "ZZ Pl Template/9 Copy to Zone Pipelines"
+		},
+		"annotations": []
+	}
+}

@@ -1,0 +1,27 @@
+{
+	"$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"workspaceName": {
+			"value": "intergen-data-mdp-synapse-dev"
+		},
+		"AzureDataLakeStorage2_2_accountKey": {
+			"value": ""
+		},
+		"intergen-data-mdp-synapse-dev-WorkspaceDefaultSqlServer_connectionString": {
+			"value": ""
+		},
+		"intergen_data_mdp_synapse_serverless_sql_dev_connectionString": {
+			"value": ""
+		},
+		"AzureDataLakeStorage2_2_properties_typeProperties_url": {
+			"value": "https://intergendatamdpadlsdev.dfs.core.windows.net/"
+		},
+		"intergen-data-mdp-synapse-dev-WorkspaceDefaultStorage_properties_typeProperties_url": {
+			"value": "https://intergendatamdpadlsdev.dfs.core.windows.net"
+		},
+		"nyc_tlc_yellow_sasUri": {
+			"value": ""
+		}
+	}
+}

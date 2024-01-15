@@ -1,6 +1,0 @@
-{
-    "properties": {
-        "privateLinkResourceId": "/subscriptions/2caa4674-ce46-47c8-b863-b222c129e397/resourceGroups/MetaData_Driven_Framework_Terraform_VNET/providers/Microsoft.Web/sites/func-cg-dev-ae-006",
-        "groupId": "sites"
-    }
-}

@@ -1,0 +1,181 @@
+{
+	"name": "Pl_Master_Notification_Dim_StagingToLanding",
+	"properties": {
+		"activities": [
+			{
+				"name": "Get_Dim_SPs",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderQuery": "select distinct sc.name +'.'+ pr.name as proc_name \nfrom sys.procedures pr \nleft outer join sys.parameters p \non pr.object_id = p.object_id \ninner join sys.schemas sc \non pr.schema_id = sc.schema_id \nwhere p.name is not null \nand sc.name = 'dbo' \nand pr.name='SP_LoadDim_EventDetails'\n--and (pr.name like '%LoadDim%' or pr.name like '%LoadLink%')\n--and pr.name!='SP_LoadLink_Notification_Connection'\n\n",
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "Ds_ASA_DMP",
+						"type": "DatasetReference",
+						"parameters": {
+							"pm_DBName": {
+								"value": "@pipeline().parameters.ASA_DBName",
+								"type": "Expression"
+							},
+							"pm_ServerName": {
+								"value": "@pipeline().parameters.ASA_ServerName",
+								"type": "Expression"
+							}
+						}
+					},
+					"firstRowOnly": false
+				}
+			},
+			{
+				"name": "ForEachSP",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "Get_Dim_SPs",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('Get_Dim_SPs').output.value",
+						"type": "Expression"
+					},
+					"activities": [
+						{
+							"name": "Create_Dim_Files_Landing",
+							"type": "Copy",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "SqlDWSource",
+									"sqlReaderStoredProcedureName": {
+										"value": "@item().proc_name",
+										"type": "Expression"
+									},
+									"storedProcedureParameters": {
+										"GetNewWaterMark": {
+											"type": "Boolean",
+											"value": {
+												"value": "@pipeline().parameters.GetNewWaterMark",
+												"type": "Expression"
+											}
+										},
+										"RowValidFrom": {
+											"type": "Datetime",
+											"value": {
+												"value": "@pipeline().parameters.RowValidFrom",
+												"type": "Expression"
+											}
+										}
+									},
+									"queryTimeout": "02:00:00",
+									"partitionOption": "None"
+								},
+								"sink": {
+									"type": "ParquetSink",
+									"storeSettings": {
+										"type": "AzureBlobFSWriteSettings"
+									},
+									"formatSettings": {
+										"type": "ParquetWriteSettings"
+									}
+								},
+								"enableStaging": false,
+								"translator": {
+									"type": "TabularTranslator",
+									"typeConversion": true,
+									"typeConversionSettings": {
+										"allowDataTruncation": true,
+										"treatBooleanAsNumber": false
+									}
+								}
+							},
+							"inputs": [
+								{
+									"referenceName": "Ds_ASA_DMP",
+									"type": "DatasetReference",
+									"parameters": {
+										"pm_DBName": {
+											"value": "@pipeline().parameters.ASA_DBName",
+											"type": "Expression"
+										},
+										"pm_ServerName": {
+											"value": "@pipeline().parameters.ASA_ServerName",
+											"type": "Expression"
+										}
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "AzureBlobStorage_Parquet_Azure",
+									"type": "DatasetReference",
+									"parameters": {
+										"FileName": {
+											"value": "@concat(substring(item().proc_name,11,sub(length(item().proc_name),11)),'_',utcNow(),'.parquet')\n\n",
+											"type": "Expression"
+										},
+										"RelativePath": {
+											"value": "@concat(pipeline().parameters.MainCuratedFolder,'/',substring(item().proc_name,11,sub(length(item().proc_name),11)))",
+											"type": "Expression"
+										},
+										"StorageAccountContainerName": "landing"
+									}
+								}
+							]
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"MainCuratedFolder": {
+				"type": "string",
+				"defaultValue": "Notification_DataMart"
+			},
+			"ASA_DBName": {
+				"type": "string",
+				"defaultValue": "wsentsynserverlessdb001"
+			},
+			"GetNewWaterMark": {
+				"type": "bool",
+				"defaultValue": false
+			},
+			"RowValidFrom": {
+				"type": "string",
+				"defaultValue": "1900-01-01 00:00:00.0000000"
+			},
+			"ASA_ServerName": {
+				"type": "string",
+				"defaultValue": "ws-ent-syn-dmp-dev-004-ondemand.sql.azuresynapse.net"
+			}
+		},
+		"folder": {
+			"name": "Notification_DataMart/1 Pl_Load_CuratedFolder/Pl_Child"
+		},
+		"annotations": []
+	}
+}

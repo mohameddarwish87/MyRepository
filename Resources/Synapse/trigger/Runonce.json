@@ -1,0 +1,84 @@
+{
+	"name": "Runonce",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "Create Dataverse Raw View",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"SourceFolderPath": "DataverseTest",
+					"DatabaseName": "ws-ent-syn-serverlessdb-001",
+					"StorageContainerName": "staging",
+					"ServerName": "ws-ent-synapseworkspace-dev-002-ondemand.sql.azuresynapse.net",
+					"RawView_SchemaName": "dbo"
+				}
+			},
+			{
+				"pipelineReference": {
+					"referenceName": "1_1 Check Each Table",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"RelativePath": "DataverseTest",
+					"StorageAccountContainerName": "landing",
+					"DatabaseName": "dataverse_wsdttest_unq3f0c71de29f842399d828201e1474",
+					"Servername": "ws-ent-syn-dmplz-dev-004-ondemand.sql.azuresynapse.net",
+					"DataLakeBlobStorageURL": "https://wsentdatalakedev002.blob.core.windows.net/"
+				}
+			},
+			{
+				"pipelineReference": {
+					"referenceName": "Ingest Dataverse",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"RelativePath": "DataverseTest",
+					"StorageAccountContainerName": "landing",
+					"DBName": "dataverse_wsdttest_unq3f0c71de29f842399d828201e1474",
+					"ServerName": "ws-ent-syn-dmplz-dev-004-ondemand.sql.azuresynapse.net",
+					"DataLakeBlobStorageURL": "https://wsentdatalakedev002.blob.core.windows.net/"
+				}
+			},
+			{
+				"pipelineReference": {
+					"referenceName": "Create Notification Curated Views",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"SourceFolderPath": "Notification_DataMart",
+					"DataMart_DBName": "Notification_DataMart",
+					"StorageContainerName": "curated",
+					"ServerName": "ws-ent-synapseworkspace-dev-002-ondemand.sql.azuresynapse.net",
+					"DataMart_SchemaName": "Notification"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Month",
+				"interval": 1,
+				"startTime": "2022-12-19T08:05:00",
+				"timeZone": "New Zealand Standard Time",
+				"schedule": {
+					"minutes": [
+						30
+					],
+					"hours": [
+						6
+					],
+					"monthlyOccurrences": [
+						{
+							"day": "Sunday",
+							"occurrence": 1
+						}
+					]
+				}
+			}
+		}
+	}
+}

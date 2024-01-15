@@ -1,0 +1,20 @@
+{
+	"name": "03_CreateExternalDataSource_Fileformat",
+	"properties": {
+		"folder": {
+			"name": "ws-ent-syn-serverlessdb-001/Notification_DataMart"
+		},
+		"content": {
+			"query": "/*Use Notification_Datamart\ngo\nCREATE EXTERNAL DATA SOURCE [dls-curated-ManagedIdentity] WITH (LOCATION = N'abfss://curated@wsentdatalakedev002.dfs.core.windows.net',\nCREDENTIAL = [ManagedIdentityCredential])\nGO\nCREATE EXTERNAL FILE FORMAT [SynapseParquetFormat] WITH (FORMAT_TYPE = PARQUET)\nGO\n*/\n",
+			"metadata": {
+				"language": "sql"
+			},
+			"currentConnection": {
+				"databaseName": "Notification_DataMart",
+				"poolName": "Built-in"
+			},
+			"resultLimit": 5000
+		},
+		"type": "SqlQuery"
+	}
+}

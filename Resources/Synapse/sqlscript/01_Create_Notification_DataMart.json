@@ -1,0 +1,20 @@
+{
+	"name": "01_Create_Notification_DataMart",
+	"properties": {
+		"folder": {
+			"name": "ws-ent-syn-serverlessdb-001/Notification_DataMart"
+		},
+		"content": {
+			"query": "/*Create Database Notification_Datamart\nGO\n*/\n",
+			"metadata": {
+				"language": "sql"
+			},
+			"currentConnection": {
+				"databaseName": "master",
+				"poolName": "Built-in"
+			},
+			"resultLimit": 5000
+		},
+		"type": "SqlQuery"
+	}
+}

@@ -1,0 +1,20 @@
+{
+	"name": "05_Create UserDefined DatabaseRole",
+	"properties": {
+		"folder": {
+			"name": "ws-ent-syn-serverlessdb-001/Notification_DataMart"
+		},
+		"content": {
+			"query": "/*Use Notification_Datamart\nGO\nCREATE ROLE Views_UNCLASSIFIED \nGO\nGrant SELECT  ON SCHEMA :: Notification to Views_UNCLASSIFIED\nGO\nALTER ROLE Views_UNCLASSIFIED ADD MEMBER [DataOps All Datamart Only Unclassified] */\n",
+			"metadata": {
+				"language": "sql"
+			},
+			"currentConnection": {
+				"databaseName": "Notification_DataMart",
+				"poolName": "Built-in"
+			},
+			"resultLimit": 5000
+		},
+		"type": "SqlQuery"
+	}
+}

@@ -1,0 +1,20 @@
+{
+	"name": "dbo_SP_LoadDim_Business",
+	"properties": {
+		"folder": {
+			"name": "ws-ent-syn-serverlessdb-001/StoredProcedure"
+		},
+		"content": {
+			"query": "/****** Object:  StoredProcedure [dbo].[SP_LoadDim_Business]    Script Date: 12/22/2022 5:00:57 AM ******/\nSET ANSI_NULLS ON\nGO\n\nSET QUOTED_IDENTIFIER ON\nGO\n\n\nCREATE OR ALTER  PROCEDURE [dbo].[SP_LoadDim_Business]\n( @GetNewWaterMark bit=0,@RowValidFrom Datetime2(7)='1900-01-01 00:00:00.0000000'\n)\nAS\nBegin \n\tIF @GetNewWaterMark>0\n\tBEGIN\n\tSELECT isnull(max(RowValidFrom),@RowValidFrom) AS RowValidFrom\n\t\t\tFROM [dbo].[account] \n\t\t\tWHERE CAST(RowValidFrom As datetime2(7))>@RowValidFrom\n\tEND\n\tELSE\nWITH CTE AS (\n\n\tSELECT \t\n\t\t A.[accountid] AS\t\t\t\t\t[BusinessID]\n\t\t,A.[name] AS\t\t\t\t\t\t[BusinessName]\n\t\t,A.[ws_tradingname] AS\t\t\t[BusinessTradingName]\n\t\t,A.[ws_legalname] AS\t\t\t\t[BusinessLegalName]\n\t\t,A.[ws_nzbn] AS\t\t\t\t\t[NZBN]\n\t\t,A.[ws_industry] AS\t\t\t\t[Industry]\n\t\t\t,A.address1_city AS\t\t\t\t[City]\n\t\t,A.primarycontactidname AS\t\t[BusinessPrimaryContact]\n\n\t\t,A.[transactioncurrencyidname] AS [Currency]\n\t\t,A.exchangerate   \n\t\t--Keys for Look up\n        ,A.primarycontactid\t\t\t[PrimaryContactID]\n        ,A.ws_businessindustry as\t\t[BusinessIndustryID]\n\t\t, b.localizedlabel        AS  [Status],\n        C.localizedlabel        AS  [StatusReason]\n\t\t,convert(datetimeoffset,A.[modifiedon]) as\t[ModifiedDate]\n       ,convert(datetimeoffset, A.[createdon]) as\t[CreatedDate]\n\t   ,A.createdbyname as\t[CreatedBy]\n\t   ,A.modifiedbyname\t\t[ModifiedBy]\n\t\t,ROW_NUMBER()OVER (PARTITION BY A.ID Order by A.versionnumber DESC) AS ROW_RUM\n        \n\tFROM [dbo].[account] A\n\tLEFT  JOIN [dbo].[StateMetadata] B\n    ON A.statecode=b.State\n       AND b.EntityName='account'\n\t   AND a.RowIsCurrent='true'\nLEFT JOIN [dbo].StatusMetadata C\non  A.statuscode=C.Status\nAND c.EntityName='account'\nAND a.RowIsCurrent='true'\nWHERE CAST(a.RowValidFrom as datetime2(7)) > @RowValidFrom\n\t)\n\n\n\t\t SELECT \n\t\t --Row_NUMBER() Over (order by [BusinessID] desc)+1000 AS BusinessKey\n\t\t [BusinessName]\n\t\t,[BusinessTradingName]\n\t\t,[BusinessLegalName]\n\t\t,[NZBN]\n\t\t,[Industry]\n\t\t,[City]\n\t\t,[BusinessPrimaryContact]\n\t\t,[Currency]\n\t\t,[BusinessID]\n\t\t,[PrimaryContactID]\n\t\t,[BusinessIndustryID]\n\t\tFROM CTE WHERE ROW_RUM=1 and [Status]='Active' and [BusinessID] is not null\n\n\t\tUNION \n\t\tSELECT \n\t\tnull,\nnull,\nnull,\nnull,\nnull,\nnull,\nnull,\nnull,\n'UNKNOWN',\n'UNKNOWN',\n'UNKNOWN'\n\n\t\tEND\nGO\n\n\n",
+			"metadata": {
+				"language": "sql"
+			},
+			"currentConnection": {
+				"databaseName": "wsentsynserverlessdb001",
+				"poolName": "Built-in"
+			},
+			"resultLimit": 5000
+		},
+		"type": "SqlQuery"
+	}
+}

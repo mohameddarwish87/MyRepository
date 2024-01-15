@@ -1,0 +1,240 @@
+{
+	"name": "Pl_Master_Notification_DataMart_Manual_AfterChange",
+	"properties": {
+		"activities": [
+			{
+				"name": "Load Fact",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "Create RolePlay Dim",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "Pl_Master_Notification_Fact_StagingToLanding",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"MainCuratedFolder": {
+							"value": "@pipeline().parameters.MainCuratedFolder",
+							"type": "Expression"
+						},
+						"ASA_DBName": {
+							"value": "@pipeline().parameters.ASA_DBName",
+							"type": "Expression"
+						},
+						"GetNewWaterMark": {
+							"value": "@pipeline().parameters.GetNewWaterMark",
+							"type": "Expression"
+						},
+						"RowValidFrom": {
+							"value": "@pipeline().parameters.RowValidFrom",
+							"type": "Expression"
+						},
+						"ASA_ServerName": {
+							"value": "@pipeline().parameters.ASA_ServerName",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "Create Curated Dim Views",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "Load Dim",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "Create Notification Curated Views",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"SourceFolderPath": {
+							"value": "@pipeline().parameters.MainCuratedFolder",
+							"type": "Expression"
+						},
+						"DataMart_DBName": {
+							"value": "@pipeline().parameters.DataMart_DBName",
+							"type": "Expression"
+						},
+						"StorageContainerName": {
+							"value": "@pipeline().parameters.StoreageContainerName",
+							"type": "Expression"
+						},
+						"ServerName": {
+							"value": "@pipeline().parameters.ASA_ServerName",
+							"type": "Expression"
+						},
+						"DataMart_SchemaName": {
+							"value": "@pipeline().parameters.DataMart_SchemaName",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "Create RolePlay Dim",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "Create Curated Dim Views",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "Pl_Master_Notification_Dim_RolePlay",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"ASA_DBName": {
+							"value": "@pipeline().parameters.DataMart_DBName",
+							"type": "Expression"
+						},
+						"ASA_ServerName": {
+							"value": "@pipeline().parameters.ASA_ServerName",
+							"type": "Expression"
+						},
+						"DataMart_SchemaName": {
+							"value": "@pipeline().parameters.DataMart_SchemaName",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "Create Fact Views",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "Load Fact",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "Create Notification Curated Views",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"SourceFolderPath": {
+							"value": "@pipeline().parameters.MainCuratedFolder",
+							"type": "Expression"
+						},
+						"DataMart_DBName": {
+							"value": "@pipeline().parameters.DataMart_DBName",
+							"type": "Expression"
+						},
+						"StorageContainerName": {
+							"value": "@pipeline().parameters.StoreageContainerName",
+							"type": "Expression"
+						},
+						"ServerName": {
+							"value": "@pipeline().parameters.ASA_ServerName",
+							"type": "Expression"
+						},
+						"DataMart_SchemaName": {
+							"value": "@pipeline().parameters.DataMart_SchemaName",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "Load Dim",
+				"type": "ExecutePipeline",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "Pl_Master_Notification_Dim_StagingToLanding",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"MainCuratedFolder": {
+							"value": "@pipeline().parameters.MainCuratedFolder",
+							"type": "Expression"
+						},
+						"ASA_DBName": {
+							"value": "@pipeline().parameters.ASA_DBName",
+							"type": "Expression"
+						},
+						"GetNewWaterMark": {
+							"value": "@pipeline().parameters.GetNewWaterMark",
+							"type": "Expression"
+						},
+						"RowValidFrom": {
+							"value": "@pipeline().parameters.RowValidFrom",
+							"type": "Expression"
+						},
+						"ASA_ServerName": {
+							"value": "@pipeline().parameters.ASA_ServerName",
+							"type": "Expression"
+						}
+					}
+				}
+			}
+		],
+		"parameters": {
+			"MainCuratedFolder": {
+				"type": "string",
+				"defaultValue": "Notification_DataMart"
+			},
+			"ASA_DBName": {
+				"type": "string",
+				"defaultValue": "wsentsynserverlessdb001"
+			},
+			"GetNewWaterMark": {
+				"type": "bool",
+				"defaultValue": false
+			},
+			"RowValidFrom": {
+				"type": "string",
+				"defaultValue": "1900-01-01 00:00:00.0000000"
+			},
+			"ASA_ServerName": {
+				"type": "string",
+				"defaultValue": "ws-ent-syn-dmp-dev-004-ondemand.sql.azuresynapse.net"
+			},
+			"StoreageContainerName": {
+				"type": "string",
+				"defaultValue": "curated"
+			},
+			"DataMart_SchemaName": {
+				"type": "string",
+				"defaultValue": "Notification"
+			},
+			"DataMart_DBName": {
+				"type": "string",
+				"defaultValue": "Notification_DataMart"
+			}
+		},
+		"folder": {
+			"name": "Notification_DataMart/1 Pl_Load_CuratedFolder"
+		},
+		"annotations": []
+	}
+}

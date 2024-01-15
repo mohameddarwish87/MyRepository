@@ -1,0 +1,49 @@
+trigger: none
+
+variables:
+- group: WS-ADLS-Deploy
+jobs:
+- job: Provision
+  displayName: 'ADLS Migrate'
+  pool: ws-dsvm-dev-002
+    #vmImage: windows-latest
+  steps:
+  - task: UsePythonVersion@0
+    displayName: 'Install python 3.10'
+    inputs:
+     versionSpec: '3.10'
+    #disableDownloadFromRegistry: false
+     addToPath: true
+#  - script: |
+#      pip install azure.storage.blob
+  - task: PythonScript@0
+    displayName: 'Run a Python script'
+    inputs:
+     scriptSource: 'filePath'
+     scriptPath: '$(System.DefaultWorkingDirectory)/Deployment/StorageAccountContainerCopy.py'
+    env:
+     SourceContainer: $(SourceContainer)
+#     TargetContainer: $(TargetContainer)
+     SourceStorageAccount: $(SourceStorageAccount)
+#     TargetStorageAccount: $(TargetStorageAccount)
+     SourceStorageAccountSaSToken: $(SourceStorageAccountSaSToken)
+#     TargetStorageAccountSaSToken: $(TargetStorageAccountSaSToken)
+#     Client_id: $(Client_id)
+#     Client_Secret: $(Client_Secret)
+#     Tenant_id: $(Tenant_id)
+  - task: CopyFiles@2
+    displayName: 'Copy Files to: $(build.artifactstagingdirectory)'
+    inputs:
+      SourceFolder: '$(system.defaultworkingdirectory)'
+      Contents: '**'
+      TargetFolder: '$(build.artifactstagingdirectory)'
+    condition: succeededOrFailed()
+  - task: PublishBuildArtifacts@1
+    displayName: 'Publish Artifact: drop'
+    inputs:
+      PathtoPublish: '$(build.artifactstagingdirectory)'
+    condition: succeededOrFailed()
+
+#     Client_id: $(SP_Client_id)
+#     Client_Secret: $(SP_Client_Secret)
+#     Tenant_id: $(SP_Tenant_id)

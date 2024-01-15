@@ -1,0 +1,20 @@
+{
+	"name": "08_Create RolePlaying Dimention Views",
+	"properties": {
+		"folder": {
+			"name": "ws-ent-syn-serverlessdb-001/Notification_DataMart"
+		},
+		"content": {
+			"query": "--Exec Roleplay dimention pipeline ",
+			"metadata": {
+				"language": "sql"
+			},
+			"currentConnection": {
+				"databaseName": "Notification_DataMart",
+				"poolName": "Built-in"
+			},
+			"resultLimit": 5000
+		},
+		"type": "SqlQuery"
+	}
+}

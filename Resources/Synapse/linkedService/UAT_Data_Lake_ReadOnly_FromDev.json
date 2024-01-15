@@ -1,0 +1,15 @@
+{
+	"name": "UAT_Data_Lake_ReadOnly_FromDev",
+	"properties": {
+		"description": "This linked service is used to connect to the UAT data lake from dev synapse workspace.\nUsed by the DE team to PoC queries.\n\nThe linked service is needed to connect up the Data Tab.",
+		"annotations": [],
+		"type": "AzureBlobFS",
+		"typeProperties": {
+			"url": "https://wsentstdmplakeuat002.dfs.core.windows.net/"
+		},
+		"connectVia": {
+			"referenceName": "AutoResolveIntegrationRuntime",
+			"type": "IntegrationRuntimeReference"
+		}
+	}
+}

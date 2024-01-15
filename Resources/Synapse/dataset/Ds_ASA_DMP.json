@@ -1,0 +1,34 @@
+{
+	"name": "Ds_ASA_DMP",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "Azure-Synapse-WorkspaceDefaultSqlServer",
+			"type": "LinkedServiceReference",
+			"parameters": {
+				"DBName": {
+					"value": "@dataset().pm_DBName",
+					"type": "Expression"
+				},
+				"Servername": {
+					"value": "@dataset().pm_ServerName",
+					"type": "Expression"
+				}
+			}
+		},
+		"parameters": {
+			"pm_DBName": {
+				"type": "string"
+			},
+			"pm_ServerName": {
+				"type": "string"
+			}
+		},
+		"annotations": [],
+		"type": "AzureSqlDWTable",
+		"schema": [],
+		"typeProperties": {
+			"schema": "dbo",
+			"table": "account"
+		}
+	}
+}

@@ -1,0 +1,20 @@
+{
+	"name": "SP_LoadDim_Breach_Category",
+	"properties": {
+		"folder": {
+			"name": "ws-ent-syn-serverlessdb-001/StoredProcedure"
+		},
+		"content": {
+			"query": "/****** Object:  StoredProcedure [dbo].[SP_LoadDim_Breach_Category]    Script Date: 12/22/2022 4:59:28 AM ******/\nSET ANSI_NULLS ON\nGO\n\nSET QUOTED_IDENTIFIER ON\nGO\n\n\nCREATE OR ALTER     PROCEDURE [dbo].[SP_LoadDim_Breach_Category]\n( \n@GetNewWaterMark bit=0,@RowValidFrom Datetime2(7)='1900-01-01 00:00:00.0000000'\n)\nAS\nBegin \n\tIF @GetNewWaterMark>0\n\tBEGIN\n\tSELECT isnull(max(RowValidFrom),@RowValidFrom) AS RowValidFrom\n\t\t\tFROM [dbo].ws_categoryofbreach \n\t\t\tWHERE CAST(RowValidFrom As datetime2(7))>@RowValidFrom\n\tEND\n\tELSE\nWITH CTE AS (\nSelect \nws_categoryofbreachid AS\t[Breach Category ID],\nws_name AS\t\t\t\t\t[Breach Category Name]\n,b.LocalizedLabel  AS\t\t[Status]\n,C.LocalizedLabel AS\t\t[Status Reason]\n,convert(datetimeoffset,[createdon]) as\t\t[Created Date]\n,convert(datetimeoffset,[modifiedon]) as\t[Modified Date]\n,createdbyname as\t[Created By]\n,modifiedbyname\t\t[Modified By]\n,ROW_NUMBER()OVER (PARTITION BY ID Order by versionnumber DESC) AS ROW_RUM\nFROM [dbo].ws_categoryofbreach A\nLEFT  JOIN [dbo].[StateMetadata] B\n    ON A.statecode=b.State\n       AND b.EntityName='ws_typeofbreach'\nLEFT JOIN [dbo].StatusMetadata C\non  A.statuscode=C.Status\nAND c.EntityName='ws_typeofbreach'\n\tWHERE CAST(a.RowValidFrom as datetime2(7)) > @RowValidFrom\n)\nSELECT \n -- Row_NUMBER() Over (order by [Breach Category ID] desc)+1000 AS BreachCategoryKey\n [Breach Category Name] as [BreachCategoryName]\n,[Breach Category ID] as [BreachCategoryID]\n\nFROM CTE WHERE ROW_RUM=1  and [Status]='Active' and [Breach Category ID] is not null\nUNION  ALL\n\nSELECT \n\t\tNull,\n\t\t'UNKNOWN'\n\n\tEND\nGO\n\n\n",
+			"metadata": {
+				"language": "sql"
+			},
+			"currentConnection": {
+				"databaseName": "wsentsynserverlessdb001",
+				"poolName": "Built-in"
+			},
+			"resultLimit": 5000
+		},
+		"type": "SqlQuery"
+	}
+}

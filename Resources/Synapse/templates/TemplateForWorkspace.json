@@ -1,0 +1,668 @@
+{
+	"$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"workspaceName": {
+			"type": "string",
+			"metadata": "Workspace name",
+			"defaultValue": "intergen-data-mdp-synapse-dev"
+		},
+		"AzureDataLakeStorage2_2_accountKey": {
+			"type": "secureString",
+			"metadata": "Secure string for 'accountKey' of 'AzureDataLakeStorage2_2'"
+		},
+		"intergen-data-mdp-synapse-dev-WorkspaceDefaultSqlServer_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'intergen-data-mdp-synapse-dev-WorkspaceDefaultSqlServer'"
+		},
+		"intergen_data_mdp_synapse_serverless_sql_dev_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'intergen_data_mdp_synapse_serverless_sql_dev'"
+		},
+		"AzureDataLakeStorage2_2_properties_typeProperties_url": {
+			"type": "string",
+			"defaultValue": "https://intergendatamdpadlsdev.dfs.core.windows.net/"
+		},
+		"intergen-data-mdp-synapse-dev-WorkspaceDefaultStorage_properties_typeProperties_url": {
+			"type": "string",
+			"defaultValue": "https://intergendatamdpadlsdev.dfs.core.windows.net"
+		},
+		"nyc_tlc_yellow_sasUri": {
+			"type": "secureString",
+			"metadata": "Secure string for 'sasUri' of 'nyc_tlc_yellow'"
+		}
+	},
+	"variables": {
+		"workspaceId": "[concat('Microsoft.Synapse/workspaces/', parameters('workspaceName'))]"
+	},
+	"resources": [
+		{
+			"name": "[concat(parameters('workspaceName'), '/Create_View_OverLake')]",
+			"type": "Microsoft.Synapse/workspaces/pipelines",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"description": "This pipeline reads metadata from the Data Lake and magics up a whole lot of SQL views over the top of the raw zone.",
+				"activities": [
+					{
+						"name": "Create Dest Schema",
+						"type": "Lookup",
+						"dependsOn": [
+							{
+								"activity": "Get ContainerMeterData",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "SqlDWSource",
+								"sqlReaderQuery": {
+									"value": "@concat('IF NOT EXISTS ( SELECT  *\n                FROM    sys.schemas\n                WHERE   name = N''',pipeline().parameters.SourceName,''' )\n    EXEC(''CREATE SCHEMA ',pipeline().parameters.SourceName, ''');','')",
+									"type": "Expression"
+								},
+								"queryTimeout": "02:00:00",
+								"partitionOption": "None"
+							},
+							"dataset": {
+								"referenceName": "intergen_data_mdp_synapse_serverless_sql_dev",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						}
+					},
+					{
+						"name": "Get ContainerMeterData",
+						"type": "WebActivity",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"url": {
+								"value": "@Concat(pipeline().parameters.DataLakeStorageBlobURL,'/',pipeline().parameters.LakeZone,'/',pipeline().parameters.SourceName,'/',pipeline().parameters.SchemaName,'/',pipeline().parameters.TableName,'?comp=metadata')",
+								"type": "Expression"
+							},
+							"connectVia": {
+								"referenceName": "AutoResolveIntegrationRuntime",
+								"type": "IntegrationRuntimeReference"
+							},
+							"method": "GET",
+							"headers": {
+								"x-ms-version": "2020-10-02"
+							},
+							"authentication": {
+								"type": "MSI",
+								"resource": "https://storage.azure.com/"
+							}
+						}
+					},
+					{
+						"name": "Set variable1",
+						"type": "SetVariable",
+						"dependsOn": [
+							{
+								"activity": "Get ContainerMeterData",
+								"dependencyConditions": [
+									"Skipped"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"variableName": "debugvar",
+							"value": {
+								"value": "@Concat('CREATE VIEW [',pipeline().parameters.SourceName,'].[',pipeline().parameters.SchemaName,'_',pipeline().parameters.TableName,'] as SELECT ', activity('Get ContainerMeterData').output.ADFWebActivityResponseHeaders['x-ms-meta-ColumnsCSV'],', r.filepath() AS filepath FROM OPENROWSET(BULK ''',pipeline().parameters.DataLakeStorageBlobURL,'/',pipeline().parameters.LakeZone,'/',pipeline().parameters.SourceName,'/',pipeline().parameters.SchemaName,'/',pipeline().parameters.TableName,'/*.parquet'',FORMAT=''PARQUET'' ) WITH (', activity('Get ContainerMeterData').output.ADFWebActivityResponseHeaders['x-ms-meta-ColumnsAndDatatypes'],') AS r')",
+								"type": "Expression"
+							}
+						}
+					},
+					{
+						"name": "Script ServerLess View",
+						"type": "Lookup",
+						"dependsOn": [
+							{
+								"activity": "Create Dest Schema",
+								"dependencyConditions": [
+									"Succeeded",
+									"Failed"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "SqlDWSource",
+								"sqlReaderQuery": {
+									"value": "@Concat('CREATE VIEW [',pipeline().parameters.SourceName,'].[',pipeline().parameters.SchemaName,'_',pipeline().parameters.TableName,'] as SELECT ', activity('Get ContainerMeterData').output.ADFWebActivityResponseHeaders['x-ms-meta-ColumnsCSV'],', r.filepath() AS filepath FROM OPENROWSET(BULK ''',pipeline().parameters.DataLakeStorageBlobURL,'/',pipeline().parameters.LakeZone,'/',pipeline().parameters.SourceName,'/',pipeline().parameters.SchemaName,'/',pipeline().parameters.TableName,'/*.parquet'',FORMAT=''PARQUET'' ) WITH (', activity('Get ContainerMeterData').output.ADFWebActivityResponseHeaders['x-ms-meta-ColumnsAndDatatypes'],') AS r')",
+									"type": "Expression"
+								},
+								"queryTimeout": "02:00:00",
+								"partitionOption": "None"
+							},
+							"dataset": {
+								"referenceName": "intergen_data_mdp_synapse_serverless_sql_dev",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {},
+					"cancelAfter": {}
+				},
+				"parameters": {
+					"SchemaName": {
+						"type": "string",
+						"defaultValue": "Sales"
+					},
+					"TableName": {
+						"type": "string",
+						"defaultValue": "CreditCard"
+					},
+					"SourceName": {
+						"type": "string",
+						"defaultValue": "AdventureWorks"
+					},
+					"DataLakeStorageBlobURL": {
+						"type": "string",
+						"defaultValue": "https://intergendatamdpadlsdev.blob.core.windows.net"
+					},
+					"LakeZone": {
+						"type": "string",
+						"defaultValue": "raw"
+					},
+					"TEST": {
+						"type": "string"
+					}
+				},
+				"variables": {
+					"debugvar": {
+						"type": "String"
+					}
+				},
+				"annotations": [],
+				"lastPublishTime": "2021-10-07T04:21:03Z"
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/datasets/intergen_data_mdp_synapse_serverless_sql_dev')]",
+				"[concat(variables('workspaceId'), '/integrationRuntimes/AutoResolveIntegrationRuntime')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/intergen_data_mdp_synapse_dev_WorkspaceDefaultStorage')]",
+			"type": "Microsoft.Synapse/workspaces/datasets",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "intergen-data-mdp-synapse-dev-WorkspaceDefaultStorage",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "Parquet",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"fileSystem": "landing"
+					},
+					"compressionCodec": "snappy"
+				},
+				"schema": []
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/linkedServices/intergen-data-mdp-synapse-dev-WorkspaceDefaultStorage')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/intergen_data_mdp_synapse_serverless_sql_dev')]",
+			"type": "Microsoft.Synapse/workspaces/datasets",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "intergen_data_mdp_synapse_serverless_sql_dev",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "AzureSqlDWTable",
+				"schema": [],
+				"typeProperties": {
+					"schema": "dbo",
+					"table": "CurrecyRate_100Records_View"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/linkedServices/intergen_data_mdp_synapse_serverless_sql_dev')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/AzureDataLakeStorage2_2')]",
+			"type": "Microsoft.Synapse/workspaces/linkedServices",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"annotations": [],
+				"type": "AzureBlobFS",
+				"typeProperties": {
+					"url": "[parameters('AzureDataLakeStorage2_2_properties_typeProperties_url')]",
+					"accountKey": {
+						"type": "SecureString",
+						"value": "[parameters('AzureDataLakeStorage2_2_accountKey')]"
+					}
+				},
+				"connectVia": {
+					"referenceName": "AutoResolveIntegrationRuntime",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/integrationRuntimes/AutoResolveIntegrationRuntime')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/intergen-data-mdp-synapse-dev-WorkspaceDefaultSqlServer')]",
+			"type": "Microsoft.Synapse/workspaces/linkedServices",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"parameters": {
+					"DBName": {
+						"type": "String"
+					}
+				},
+				"annotations": [],
+				"type": "AzureSqlDW",
+				"typeProperties": {
+					"connectionString": "[parameters('intergen-data-mdp-synapse-dev-WorkspaceDefaultSqlServer_connectionString')]"
+				},
+				"connectVia": {
+					"referenceName": "AutoResolveIntegrationRuntime",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/integrationRuntimes/AutoResolveIntegrationRuntime')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/intergen-data-mdp-synapse-dev-WorkspaceDefaultStorage')]",
+			"type": "Microsoft.Synapse/workspaces/linkedServices",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"annotations": [],
+				"type": "AzureBlobFS",
+				"typeProperties": {
+					"url": "[parameters('intergen-data-mdp-synapse-dev-WorkspaceDefaultStorage_properties_typeProperties_url')]"
+				},
+				"connectVia": {
+					"referenceName": "AutoResolveIntegrationRuntime",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/integrationRuntimes/AutoResolveIntegrationRuntime')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/intergen_data_mdp_synapse_serverless_sql_dev')]",
+			"type": "Microsoft.Synapse/workspaces/linkedServices",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"annotations": [],
+				"type": "AzureSqlDW",
+				"typeProperties": {
+					"connectionString": "[parameters('intergen_data_mdp_synapse_serverless_sql_dev_connectionString')]"
+				},
+				"connectVia": {
+					"referenceName": "AutoResolveIntegrationRuntime",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/integrationRuntimes/AutoResolveIntegrationRuntime')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/nyc_tlc_yellow')]",
+			"type": "Microsoft.Synapse/workspaces/linkedServices",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"annotations": [],
+				"type": "AzureBlobStorage",
+				"typeProperties": {
+					"sasUri": "[parameters('nyc_tlc_yellow_sasUri')]"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/AutoResolveIntegrationRuntime')]",
+			"type": "Microsoft.Synapse/workspaces/integrationRuntimes",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"type": "Managed",
+				"typeProperties": {
+					"computeProperties": {
+						"location": "AutoResolve",
+						"dataFlowProperties": {
+							"computeType": "General",
+							"coreCount": 8,
+							"timeToLive": 0
+						}
+					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/WorkspaceSystemIdentity')]",
+			"type": "Microsoft.Synapse/workspaces/credentials",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"type": "ManagedIdentity",
+				"typeProperties": {}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/Create Staging DB')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"content": {
+					"query": "CREATE DATABASE [StagingDB] COLLATE Latin1_General_100_BIN2_UTF8;\n\nuse [StagingDB] -- Use your database name\ngo\nCREATE USER [xxx.xxx@xxx.co.nz] FROM LOGIN [xxx.xxx@xxx.co.nz];\nalter role db_owner add member [xxx.xxx@xxx.co.nz]\n\ngo\nCREATE USER [xx.xx@xx.co.nz] FROM LOGIN [xx.xx@xx.co.nz];\nalter role db_owner add member [xx.xx@xx.co.nz]\n\n",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "StagingDB",
+						"poolName": "Built-in"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/Grant_Access_To_Serverless_DB_Level')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"content": {
+					"query": "use master\ngo\nCREATE LOGIN [xx.xx@xx.co.nz] FROM EXTERNAL PROVIDER;\n\nuse [intergen-data-mdp-synapse-serverless-sql-dev] -- Use your database name\ngo\nCREATE USER [xx.xx@xx.co.nz] FROM LOGIN [xx.xx@xx.co.nz];\nalter role db_owner Add member [xx.xx@xx.co.nz]",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "intergen-data-mdp-synapse-serverless-sql-dev",
+						"poolName": "Built-in"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/lookup_all_lake_sources')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"content": {
+					"query": "ALTER PROCEDURE lookup_all_lake_sources @DataLakeStorageBlobURL NVARCHAR(150)\nAS\n\n--debug only Declare @DataLakeStorageBlobURL NVARCHAR(150) = 'https://intergendatamdpadlsdev.dfs.core.windows.net/raw/AdventureWorks/Sales/Currency'\n--drop exisitng temp table for list of main views \nIF Object_ID(N'tempdb..#tempMainViews') IS NOT NULL\nBEGIN\nSET NOCOUNT ON --added by MD\nDROP TABLE #tempMainViews\nEND\n\n--create temp table of all related views\nIF Object_ID('#tempRelatedViews') IS NOT NULL\nBEGIN\nSET NOCOUNT ON --added by MD\nDROP TABLE #tempRelatedViews\nEND\n\nCREATE TABLE #tempRelatedViews (\n        SchemaName VARCHAR(50), ObjName VARCHAR(100),\n        ObjectID VARCHAR(100), ReferencedEntity VARCHAR(100), ObjectType VARCHAR(100),\n        RecursiveLevel INT\n)\n\nDECLARE @RecursiveValue int = 1\n\n--query the SQL metadata catalog to identify all views that reference the DataLakeStorageBlobURL. Save this information to main views temp table\nSelect SCHEMA_NAME(o.schema_id) as SchemaName,OBJECT_NAME (m.object_id) as ObjName, m.object_id, CAST(NULL as NVARCHAR(50)) as ReferencedEntity,ltrim(rtrim(o.type)) collate DATABASE_DEFAULT as Object_Type, @RecursiveValue as RecursiveLevel\nINTO #tempMainViews\nfrom sys.sql_modules m\nleft join sys.objects o on o.object_id = m.object_id\nwhere definition like '%' + @DataLakeStorageBlobURL + '%'\n\nDECLARE @ObjectId INT\nDECLARE @Counter int = 1\nDECLARE @RecordCount int = (SELECT COUNT(1) from #tempMainViews)\n\n--loop through the termporary table, recursing through all the dependant views that reference the RecursiveLevel 1 views.\nWHILE @Counter <= @RecordCount\nBEGIN\nSET NOCOUNT ON --added by MD\n        SET @ObjectId = (SELECT object_id \n                        FROM (SELECT *, ROW_NUMBER() OVER(ORDER BY[object_id]) AS RowNo \n                                FROM #tempMainViews) as T \n                        where RowNo = @Counter)\n                        --print @ObjectId\n                        exec lookup_related_views @ObjectId, @RecursiveValue\n                        SET @Counter = @Counter + 1\nEND\n-- Stitch the temporary tables together into one result set.\nSELECT * FROM #tempRelatedViews \nUNION SELECT * FROM #tempMainViews ORDER BY RecursiveLevel\nRETURN \nGO",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "intergen-data-mdp-synapse-serverless-sql-dev",
+						"poolName": "Built-in"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/lookup_related_views')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"content": {
+					"query": "alter PROCEDURE lookup_related_views\n@Objectid INT, @RecursiveValue int\nAS\n    SET @RecursiveValue = @RecursiveValue + 1\n\n    IF Object_ID('#tempTable') IS NOT NULL\n    BEGIN\n    SET NOCOUNT ON --added by MD\n    DROP TABLE #tempTable\n    END\n    SET NOCOUNT ON --added by MD\n    SELECT referenced_schema_name, OBJECT_NAME(referencing_id) AS referencing_entity_name,\n    referencing_id, referenced_entity_name,ltrim(rtrim(o.type)) as object_type, @RecursiveValue as RecursiveLevel\n    INTO #tempTable\n    FROM sys.sql_expression_dependencies AS sed  \n    INNER JOIN sys.objects AS o ON sed.referencing_id = o.object_id  \n    WHERE referenced_id = @objectid\n\n    INSERT INTO #tempRelatedViews SELECT * FROM #tempTable\n    \n    DECLARE @NewObjectId INT\n    DECLARE @Counter int = 1\n    DECLARE @RecordCount int = (SELECT COUNT(1) from #tempTable)\n\n    --loop through related views and recursively find other related views\n    WHILE @Counter <= @RecordCount\n    BEGIN\n    SET NOCOUNT ON --added by MD\n            SET @NewObjectId = (SELECT referencing_id \n                            FROM (SELECT *, ROW_NUMBER() OVER(ORDER BY[referencing_id]) AS RowNo \n                                    FROM #tempTable) as T \n                            where RowNo = @Counter)\n                            exec lookup_related_views @NewObjectId, @RecursiveValue\n                            SET @Counter = @Counter + 1    \n    END\nGO",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "intergen-data-mdp-synapse-serverless-sql-dev",
+						"poolName": "Built-in"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/query delta files')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"content": {
+					"query": "-- this script is to show how to query delta lake and compare to original file -- \n\n\n''' EXAMPLE TEST CASE: \n        Original data: dbo.TimVIew (view file in db - 100 records + vegetables = potato)\n        Updated data: dbo.CustomerView (>1000 records & no vegetable column)\n        Merged data as delta table: Customer/Original delta file in staging zone (<1000 records + vegetable column)\n'''\n-- query original view file  -- \nselect * from dbo.CurrecyRate_100Records_View\n\n-- query updated data --\nselect * from dbo.CustomerView\n\n-- query udpated delta file -- \n-- This is auto-generated code\nSELECT * FROM\n    OPENROWSET(\n        BULK 'https://intergendatamdpadlsdev.dfs.core.windows.net/testing/Currency/**',\n        FORMAT = 'PARQUET'\n    ) AS [result]\n",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "intergen-data-mdp-synapse-serverless-sql-dev",
+						"poolName": "Built-in"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/unpack view lineage back to the lake example')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"content": {
+					"query": "\n-- give me all views and procs connected to https://intergendatamdpadlsdev.dfs.core.windows.net/raw/AdventureWorks/Sales/Customer/*\n\n        Select m.object_id,m.definition,SCHEMA_NAME(o.schema_id) as SchemaName,OBJECT_NAME (m.object_id) as ObjName, o.name as ObjName2\n\n        from sys.sql_modules m\n        left join sys.objects o on o.object_id = m.object_id\n        where definition like '%' + 'https://intergendatamdpadlsdev.dfs.core.windows.net/raw/AdventureWorks/Sales/Customer/' + '%'\n\n-- todo recurse through sys.sql_expression_dependencies and find all the dependant sql objects\n-- as you can see we can work out that TimView is related to the https://intergendatamdpadlsdev.dfs.core.windows.net/raw/AdventureWorks/Sales/Customer/ folder.\n-- use this to fire more ETL pipelines :D\n\n\nSELECT referencing_id,OBJECT_NAME(referencing_id) AS referencing_entity_name,   \n    o.type_desc AS referencing_desciption,   \n    COALESCE(COL_NAME(referencing_id, referencing_minor_id), '(n/a)') AS referencing_minor_id,   \n    referencing_class_desc,  \n    referenced_server_name, referenced_database_name, referenced_schema_name,  \n    referenced_entity_name,   \n    COALESCE(COL_NAME(referenced_id, referenced_minor_id), '(n/a)') AS referenced_column_name,  \n    is_caller_dependent, is_ambiguous\n   ,* \nFROM sys.sql_expression_dependencies AS sed  \nINNER JOIN sys.objects AS o ON sed.referencing_id = o.object_id  \nWHERE referenced_id = 949578421",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "intergen-data-mdp-synapse-serverless-sql-dev",
+						"poolName": "Built-in"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/Profile_Lake_Data')]",
+			"type": "Microsoft.Synapse/workspaces/notebooks",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"nbformat": 4,
+				"nbformat_minor": 2,
+				"bigDataPool": {
+					"referenceName": "TestSpark3",
+					"type": "BigDataPoolReference"
+				},
+				"sessionProperties": {
+					"driverMemory": "28g",
+					"driverCores": 4,
+					"executorMemory": "28g",
+					"executorCores": 4,
+					"numExecutors": 2,
+					"conf": {
+						"spark.dynamicAllocation.enabled": "false",
+						"spark.dynamicAllocation.minExecutors": "2",
+						"spark.dynamicAllocation.maxExecutors": "2",
+						"spark.autotune.trackingId": "b9133ee2-a890-4fae-8a12-03fca8a0e0a6"
+					}
+				},
+				"metadata": {
+					"saveOutput": true,
+					"enableDebugMode": false,
+					"kernelspec": {
+						"name": "synapse_pyspark",
+						"display_name": "Synapse PySpark"
+					},
+					"language_info": {
+						"name": "python"
+					},
+					"a365ComputeOptions": {
+						"id": "/subscriptions/134b824c-eec7-4134-b15d-9b182fe58f20/resourceGroups/intergen-modern-data-platform-sandbox/providers/Microsoft.Synapse/workspaces/intergen-data-mdp-synapse-dev/bigDataPools/TestSpark3",
+						"name": "TestSpark3",
+						"type": "Spark",
+						"endpoint": "https://intergen-data-mdp-synapse-dev.dev.azuresynapse.net/livyApi/versions/2019-11-01-preview/sparkPools/TestSpark3",
+						"auth": {
+							"type": "AAD",
+							"authResource": "https://dev.azuresynapse.net"
+						},
+						"sparkVersion": "3.1",
+						"nodeCount": 10,
+						"cores": 4,
+						"memory": 28,
+						"extraHeader": null
+					}
+				},
+				"cells": [
+					{
+						"cell_type": "code",
+						"source": [
+							"## Documentation on Pandas_Profiling library\r\n",
+							"##https://medium.com/analytics-vidhya/pandas-profiling-5ecd0b977ecd\r\n",
+							"##https://pypi.org/project/pandas-profiling/\r\n",
+							"\r\n",
+							"\r\n",
+							"##todo: Make generic\r\n",
+							"\r\n",
+							"\r\n",
+							"import numpy as np\r\n",
+							"import pandas as pd\r\n",
+							"from pandas_profiling import ProfileReport\r\n",
+							"\r\n",
+							"landing_path = 'abfss://raw@intergendatamdpadlsdev.dfs.core.windows.net'\r\n",
+							"\r\n",
+							"df = spark.read.parquet(landing_path + '/AdventureWorks/Person/Person/Person2021-10-22T032115.6289172Z.parquet')\r\n",
+							"\r\n",
+							"\r\n",
+							"pdf = df.toPandas()\r\n",
+							"print(pdf)\r\n",
+							"\r\n",
+							""
+						],
+						"attachments": null,
+						"outputs": [],
+						"execution_count": 4
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"profile = ProfileReport(pdf, title=\"Pandas Profiling Report\")\r\n",
+							"profile.to_notebook_iframe()\r\n",
+							""
+						],
+						"attachments": null,
+						"outputs": [],
+						"execution_count": 5
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"##todo: save the html and json profile reports to the data lake.\r\n",
+							"print(profile.to_json())"
+						],
+						"attachments": null,
+						"outputs": [],
+						"execution_count": null
+					}
+				]
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/Job-definition-sample')]",
+			"type": "Microsoft.Synapse/workspaces/sparkJobDefinitions",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"targetBigDataPool": {
+					"referenceName": "TestSpark24",
+					"type": "BigDataPoolReference"
+				},
+				"requiredSparkVersion": "2.4",
+				"language": "python",
+				"jobProperties": {
+					"name": "Job-definition-sample",
+					"file": "abfss://curated@intergendatamdpadlsdev.dfs.core.windows.net/Notebooks/wordcount.py",
+					"conf": {
+						"spark.dynamicAllocation.enabled": "false",
+						"spark.dynamicAllocation.minExecutors": "1",
+						"spark.dynamicAllocation.maxExecutors": "2",
+						"spark.autotune.trackingId": "3d02dc5c-187f-4fb5-adee-528955ba69eb"
+					},
+					"args": [
+						"abfss://curated@intergendatamdpadlsdev.dfs.core.windows.net/Notebooks/shakespeare.txt",
+						"abfss://curated@intergendatamdpadlsdev.dfs.core.windows.net/Notebooks/result"
+					],
+					"jars": [],
+					"files": [],
+					"driverMemory": "28g",
+					"driverCores": 4,
+					"executorMemory": "28g",
+					"executorCores": 4,
+					"numExecutors": 2
+				}
+			},
+			"dependsOn": []
+		}
+	]
+}

@@ -1,0 +1,683 @@
+{
+	"name": "Ensure_LandingFolderExists_With_Metadata",
+	"properties": {
+		"activities": [
+			{
+				"name": "Lookup Tables With Watermark",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderQuery": {
+							"value": "WITH cte\nAS (\n\tSELECT DISTINCT A.table_name --,COLUMN_NAME \n\tFROM information_schema.COLUMNS A\n\tINNER JOIN information_schema.TABLES B ON A.table_name = b.table_name\n\tWHERE A.column_name = 'modifiedon'\n\t\tAND B.table_type = 'BASE TABLE'\n\t)\nSELECT A.table_name\nFROM information_schema.TABLES A\nWHERE EXISTS (\n\t\tSELECT table_name\n\t\tFROM cte B\n\t\tWHERE A.table_name = B.table_name\n\t\t)\n\tAND A.table_type = 'BASE TABLE'",
+							"type": "Expression"
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "Ds_ASA_DMP",
+						"type": "DatasetReference",
+						"parameters": {
+							"pm_DBName": {
+								"value": "@pipeline().parameters.Dataverse_DBName",
+								"type": "Expression"
+							},
+							"pm_ServerName": {
+								"value": "@pipeline().parameters.Dataverse_ServerName",
+								"type": "Expression"
+							}
+						}
+					},
+					"firstRowOnly": false
+				}
+			},
+			{
+				"name": "ForEachTable_with_watermark",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "Lookup Tables With Watermark",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('Lookup Tables With Watermark').output.value",
+						"type": "Expression"
+					},
+					"isSequential": false,
+					"activities": [
+						{
+							"name": "Create Folders using Dummy file",
+							"type": "Copy",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "SqlDWSource",
+									"sqlReaderQuery": {
+										"value": "select top 1 * from [@{pipeline().parameters.SchemeaName}].[@{item().Table_Name}]",
+										"type": "Expression"
+									},
+									"queryTimeout": "02:00:00",
+									"partitionOption": "None"
+								},
+								"sink": {
+									"type": "ParquetSink",
+									"storeSettings": {
+										"type": "AzureBlobFSWriteSettings"
+									},
+									"formatSettings": {
+										"type": "ParquetWriteSettings"
+									}
+								},
+								"enableStaging": false,
+								"translator": {
+									"type": "TabularTranslator",
+									"typeConversion": true,
+									"typeConversionSettings": {
+										"allowDataTruncation": true,
+										"treatBooleanAsNumber": false
+									}
+								}
+							},
+							"inputs": [
+								{
+									"referenceName": "Ds_ASA_DMP",
+									"type": "DatasetReference",
+									"parameters": {
+										"pm_DBName": {
+											"value": "@pipeline().parameters.Dataverse_DBName",
+											"type": "Expression"
+										},
+										"pm_ServerName": {
+											"value": "@pipeline().parameters.Dataverse_ServerName",
+											"type": "Expression"
+										}
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "AzureBlobStorage_Parquet_Azure",
+									"type": "DatasetReference",
+									"parameters": {
+										"FileName": {
+											"value": "dummy.txt",
+											"type": "Expression"
+										},
+										"RelativePath": {
+											"value": "@concat(pipeline().parameters.Relativepath,'/','dbo_',item().Table_Name)",
+											"type": "Expression"
+										},
+										"StorageAccountContainerName": {
+											"value": "@pipeline().parameters.StorageContainerName",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						},
+						{
+							"name": "Delete Dummy File",
+							"type": "Delete",
+							"dependsOn": [
+								{
+									"activity": "Create Folders using Dummy file",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"dataset": {
+									"referenceName": "AzureBlobStorage_Parquet_Azure",
+									"type": "DatasetReference",
+									"parameters": {
+										"FileName": "dummy.txt",
+										"RelativePath": {
+											"value": "@concat(pipeline().parameters.Relativepath,'/','dbo_',item().Table_Name)",
+											"type": "Expression"
+										},
+										"StorageAccountContainerName": "landing"
+									}
+								},
+								"enableLogging": false,
+								"storeSettings": {
+									"type": "AzureBlobFSReadSettings",
+									"recursive": true,
+									"enablePartitionDiscovery": false
+								}
+							}
+						},
+						{
+							"name": "Set Metadata Variables",
+							"type": "WebActivity",
+							"dependsOn": [
+								{
+									"activity": "Get Folder Metadata",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"url": {
+									"value": "@concat(pipeline().parameters.DataLakeBlobStorageURL,'/',pipeline().parameters.StorageContainerName,'/',pipeline().parameters.Relativepath,'/dbo_',item().Table_Name,'?comp=metadata')",
+									"type": "Expression"
+								},
+								"connectVia": {
+									"referenceName": "AutoResolveIntegrationRuntime",
+									"type": "IntegrationRuntimeReference"
+								},
+								"method": "PUT",
+								"headers": {
+									"x-ms-version": "2020-10-02",
+									"x-ms-blob-type": "BlockBlob",
+									"x-ms-meta-businesskey1": "Id",
+									"x-ms-meta-businesskey2": "Versionnumber",
+									"x-ms-meta-businesskey3": {
+										"value": "@activity('Get Folder Metadata').output.ADFWebActivityResponseHeaders['x-ms-meta-businesskey3']",
+										"type": "Expression"
+									},
+									"x-ms-meta-businesskey4": {
+										"value": "@activity('Get Folder Metadata').output.ADFWebActivityResponseHeaders['x-ms-meta-businesskey4']",
+										"type": "Expression"
+									},
+									"x-ms-meta-businesskey5": {
+										"value": "@activity('Get Folder Metadata').output.ADFWebActivityResponseHeaders['x-ms-meta-businesskey5']",
+										"type": "Expression"
+									},
+									"x-ms-meta-businesskey6": {
+										"value": "@activity('Get Folder Metadata').output.ADFWebActivityResponseHeaders['x-ms-meta-businesskey6']",
+										"type": "Expression"
+									},
+									"x-ms-meta-businesskey7": {
+										"value": "@activity('Get Folder Metadata').output.ADFWebActivityResponseHeaders['x-ms-meta-businesskey7']",
+										"type": "Expression"
+									},
+									"x-ms-meta-datepartitionpath": {
+										"value": "@activity('Get Folder Metadata').output.ADFWebActivityResponseHeaders['x-ms-meta-datepartitionpath']",
+										"type": "Expression"
+									},
+									"x-ms-meta-explorationzonepath": {
+										"value": "@activity('Get Folder Metadata').output.ADFWebActivityResponseHeaders['x-ms-meta-explorationzonepath']",
+										"type": "Expression"
+									},
+									"x-ms-meta-lastwatermark": {
+										"value": "1900-01-01",
+										"type": "Expression"
+									},
+									"x-ms-meta-partitionkey": {
+										"value": "@activity('Get Folder Metadata').output.ADFWebActivityResponseHeaders['x-ms-meta-partitionkey']",
+										"type": "Expression"
+									},
+									"x-ms-meta-pushtocuratedzone": {
+										"value": "@activity('Get Folder Metadata').output.ADFWebActivityResponseHeaders['x-ms-meta-pushtocuratedzone']",
+										"type": "Expression"
+									},
+									"x-ms-meta-pushtodw": {
+										"value": "@activity('Get Folder Metadata').output.ADFWebActivityResponseHeaders['x-ms-meta-pushtodw']",
+										"type": "Expression"
+									},
+									"x-ms-meta-pushtoexplorationzone": {
+										"value": "@activity('Get Folder Metadata').output.ADFWebActivityResponseHeaders['x-ms-meta-pushtoexplorationzone']",
+										"type": "Expression"
+									},
+									"x-ms-meta-pushtostagingzone": "True",
+									"x-ms-meta-scd2flag": {
+										"value": "@activity('Get Folder Metadata').output.ADFWebActivityResponseHeaders['x-ms-meta-scd2flag']",
+										"type": "Expression"
+									},
+									"x-ms-meta-upsert": {
+										"value": "@activity('Get Folder Metadata').output.ADFWebActivityResponseHeaders['x-ms-meta-upsert']",
+										"type": "Expression"
+									},
+									"x-ms-meta-watermarkcol": {
+										"value": "modifiedon",
+										"type": "Expression"
+									}
+								},
+								"body": ".",
+								"authentication": {
+									"type": "MSI",
+									"resource": "https://storage.azure.com/"
+								}
+							}
+						},
+						{
+							"name": "Get Folder Metadata",
+							"type": "WebActivity",
+							"dependsOn": [
+								{
+									"activity": "Delete Dummy File",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"url": {
+									"value": "@concat(pipeline().parameters.DataLakeBlobStorageURL,'/',pipeline().parameters.StorageContainerName,'/',pipeline().parameters.Relativepath,'?comp=metadata')",
+									"type": "Expression"
+								},
+								"connectVia": {
+									"referenceName": "AutoResolveIntegrationRuntime",
+									"type": "IntegrationRuntimeReference"
+								},
+								"method": "GET",
+								"headers": {
+									"x-ms-version": "2020-10-02"
+								},
+								"authentication": {
+									"type": "MSI",
+									"resource": "https://storage.azure.com/"
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "Lookup Tables Without Watermark",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderQuery": {
+							"value": "WITH cte\nAS (\n\tSELECT DISTINCT A.table_name --,COLUMN_NAME \n\tFROM information_schema.COLUMNS A\n\tINNER JOIN information_schema.TABLES B ON A.table_name = b.table_name\n\tWHERE A.column_name = 'modifiedon'\n\t\tAND B.table_type = 'BASE TABLE'\n\t)\nSELECT A.table_name\nFROM information_schema.TABLES A\nWHERE NOT EXISTS (\n\t\tSELECT table_name\n\t\tFROM cte B\n\t\tWHERE A.table_name = B.table_name\n\t\t)\n\tAND A.table_type = 'BASE TABLE'",
+							"type": "Expression"
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "Ds_ASA_DMP",
+						"type": "DatasetReference",
+						"parameters": {
+							"pm_DBName": {
+								"value": "@pipeline().parameters.Dataverse_DBName",
+								"type": "Expression"
+							},
+							"pm_ServerName": {
+								"value": "@pipeline().parameters.Dataverse_ServerName",
+								"type": "Expression"
+							}
+						}
+					},
+					"firstRowOnly": false
+				}
+			},
+			{
+				"name": "ForEachTable_without_waterMark",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "Lookup Tables Without Watermark",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('Lookup Tables Without Watermark').output.value",
+						"type": "Expression"
+					},
+					"isSequential": false,
+					"activities": [
+						{
+							"name": "Create Folders using Dummy file 02",
+							"type": "Copy",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "SqlDWSource",
+									"sqlReaderQuery": {
+										"value": "select top 1 * from [@{pipeline().parameters.SchemeaName}].[@{item().Table_Name}]",
+										"type": "Expression"
+									},
+									"queryTimeout": "02:00:00",
+									"partitionOption": "None"
+								},
+								"sink": {
+									"type": "ParquetSink",
+									"storeSettings": {
+										"type": "AzureBlobFSWriteSettings"
+									},
+									"formatSettings": {
+										"type": "ParquetWriteSettings"
+									}
+								},
+								"enableStaging": false,
+								"translator": {
+									"type": "TabularTranslator",
+									"typeConversion": true,
+									"typeConversionSettings": {
+										"allowDataTruncation": true,
+										"treatBooleanAsNumber": false
+									}
+								}
+							},
+							"inputs": [
+								{
+									"referenceName": "Ds_ASA_DMP",
+									"type": "DatasetReference",
+									"parameters": {
+										"pm_DBName": {
+											"value": "@pipeline().parameters.Dataverse_DBName",
+											"type": "Expression"
+										},
+										"pm_ServerName": {
+											"value": "@pipeline().parameters.Dataverse_ServerName",
+											"type": "Expression"
+										}
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "AzureBlobStorage_Parquet_Azure",
+									"type": "DatasetReference",
+									"parameters": {
+										"FileName": {
+											"value": "dummy.txt",
+											"type": "Expression"
+										},
+										"RelativePath": {
+											"value": "@concat(pipeline().parameters.Relativepath,'/','dbo_',item().Table_Name)",
+											"type": "Expression"
+										},
+										"StorageAccountContainerName": {
+											"value": "@pipeline().parameters.StorageContainerName",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						},
+						{
+							"name": "Delete Dummy File 02",
+							"type": "Delete",
+							"dependsOn": [
+								{
+									"activity": "Create Folders using Dummy file 02",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"dataset": {
+									"referenceName": "AzureBlobStorage_Parquet_Azure",
+									"type": "DatasetReference",
+									"parameters": {
+										"FileName": "dummy.txt",
+										"RelativePath": {
+											"value": "@concat(pipeline().parameters.Relativepath,'/','dbo_',item().Table_Name)",
+											"type": "Expression"
+										},
+										"StorageAccountContainerName": "landing"
+									}
+								},
+								"enableLogging": false,
+								"storeSettings": {
+									"type": "AzureBlobFSReadSettings",
+									"recursive": true,
+									"enablePartitionDiscovery": false
+								}
+							}
+						},
+						{
+							"name": "Set Metadata Variables 02",
+							"type": "WebActivity",
+							"dependsOn": [
+								{
+									"activity": "Get Folder Metadata 02",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"url": {
+									"value": "@concat(pipeline().parameters.DataLakeBlobStorageURL,'/',pipeline().parameters.StorageContainerName,'/',pipeline().parameters.Relativepath,'/dbo_',item().Table_Name,'?comp=metadata')",
+									"type": "Expression"
+								},
+								"connectVia": {
+									"referenceName": "AutoResolveIntegrationRuntime",
+									"type": "IntegrationRuntimeReference"
+								},
+								"method": "PUT",
+								"headers": {
+									"x-ms-version": "2020-10-02",
+									"x-ms-blob-type": "BlockBlob",
+									"x-ms-meta-businesskey1": {
+										"value": "@activity('Get Folder Metadata 02').output.ADFWebActivityResponseHeaders['x-ms-meta-businesskey1']",
+										"type": "Expression"
+									},
+									"x-ms-meta-businesskey2": {
+										"value": "@activity('Get Folder Metadata 02').output.ADFWebActivityResponseHeaders['x-ms-meta-businesskey2']",
+										"type": "Expression"
+									},
+									"x-ms-meta-businesskey3": {
+										"value": "@activity('Get Folder Metadata 02').output.ADFWebActivityResponseHeaders['x-ms-meta-businesskey3']",
+										"type": "Expression"
+									},
+									"x-ms-meta-businesskey4": {
+										"value": "@activity('Get Folder Metadata 02').output.ADFWebActivityResponseHeaders['x-ms-meta-businesskey4']",
+										"type": "Expression"
+									},
+									"x-ms-meta-businesskey5": {
+										"value": "@activity('Get Folder Metadata 02').output.ADFWebActivityResponseHeaders['x-ms-meta-businesskey5']",
+										"type": "Expression"
+									},
+									"x-ms-meta-businesskey6": {
+										"value": "@activity('Get Folder Metadata 02').output.ADFWebActivityResponseHeaders['x-ms-meta-businesskey6']",
+										"type": "Expression"
+									},
+									"x-ms-meta-businesskey7": {
+										"value": "@activity('Get Folder Metadata 02').output.ADFWebActivityResponseHeaders['x-ms-meta-businesskey7']",
+										"type": "Expression"
+									},
+									"x-ms-meta-datepartitionpath": {
+										"value": "@activity('Get Folder Metadata 02').output.ADFWebActivityResponseHeaders['x-ms-meta-datepartitionpath']",
+										"type": "Expression"
+									},
+									"x-ms-meta-explorationzonepath": {
+										"value": "@activity('Get Folder Metadata 02').output.ADFWebActivityResponseHeaders['x-ms-meta-explorationzonepath']",
+										"type": "Expression"
+									},
+									"x-ms-meta-lastwatermark": {
+										"value": "1900-01-01",
+										"type": "Expression"
+									},
+									"x-ms-meta-partitionkey": {
+										"value": "@activity('Get Folder Metadata 02').output.ADFWebActivityResponseHeaders['x-ms-meta-partitionkey']",
+										"type": "Expression"
+									},
+									"x-ms-meta-pushtocuratedzone": {
+										"value": "@activity('Get Folder Metadata 02').output.ADFWebActivityResponseHeaders['x-ms-meta-pushtocuratedzone']",
+										"type": "Expression"
+									},
+									"x-ms-meta-pushtodw": {
+										"value": "@activity('Get Folder Metadata 02').output.ADFWebActivityResponseHeaders['x-ms-meta-pushtodw']",
+										"type": "Expression"
+									},
+									"x-ms-meta-pushtoexplorationzone": {
+										"value": "@activity('Get Folder Metadata 02').output.ADFWebActivityResponseHeaders['x-ms-meta-pushtoexplorationzone']",
+										"type": "Expression"
+									},
+									"x-ms-meta-pushtostagingzone": "True",
+									"x-ms-meta-scd2flag": {
+										"value": "@activity('Get Folder Metadata 02').output.ADFWebActivityResponseHeaders['x-ms-meta-scd2flag']",
+										"type": "Expression"
+									},
+									"x-ms-meta-upsert": {
+										"value": "@activity('Get Folder Metadata 02').output.ADFWebActivityResponseHeaders['x-ms-meta-upsert']",
+										"type": "Expression"
+									},
+									"x-ms-meta-watermarkcol": {
+										"value": "@coalesce(null)",
+										"type": "Expression"
+									}
+								},
+								"body": ".",
+								"authentication": {
+									"type": "MSI",
+									"resource": "https://storage.azure.com/"
+								}
+							}
+						},
+						{
+							"name": "Get Folder Metadata 02",
+							"type": "WebActivity",
+							"dependsOn": [
+								{
+									"activity": "Delete Dummy File 02",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"url": {
+									"value": "@concat(pipeline().parameters.DataLakeBlobStorageURL,'/',pipeline().parameters.StorageContainerName,'/',pipeline().parameters.Relativepath,'?comp=metadata')",
+									"type": "Expression"
+								},
+								"connectVia": {
+									"referenceName": "AutoResolveIntegrationRuntime",
+									"type": "IntegrationRuntimeReference"
+								},
+								"method": "GET",
+								"headers": {
+									"x-ms-version": "2020-10-02"
+								},
+								"authentication": {
+									"type": "MSI",
+									"resource": "https://storage.azure.com/"
+								}
+							}
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"Dataverse_DBName": {
+				"type": "string",
+				"defaultValue": "dataverse_wsdttest_unq3f0c71de29f842399d828201e1474"
+			},
+			"StorageContainerName": {
+				"type": "string",
+				"defaultValue": "landing"
+			},
+			"Dataverse_ServerName": {
+				"type": "string",
+				"defaultValue": "ws-ent-syn-dmplz-dev-004-ondemand.sql.azuresynapse.net"
+			},
+			"SchemeaName": {
+				"type": "string",
+				"defaultValue": "dbo"
+			},
+			"DataLakeBlobStorageURL": {
+				"type": "string",
+				"defaultValue": "https://wsentstdatalakedmpdev004.blob.core.windows.net"
+			},
+			"Relativepath": {
+				"type": "string",
+				"defaultValue": "DataverseTest"
+			}
+		},
+		"folder": {
+			"name": "1 Configure DataLake Landing Zone Folder Structure"
+		},
+		"annotations": []
+	}
+}

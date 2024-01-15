@@ -1,0 +1,114 @@
+{
+	"name": "1 For Each Source Folder",
+	"properties": {
+		"activities": [
+			{
+				"name": "Get List of Sources",
+				"type": "GetMetadata",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "AzureBlobStorage_Binary_Azure",
+						"type": "DatasetReference",
+						"parameters": {
+							"RelativePath": {
+								"value": "@coalesce(null)",
+								"type": "Expression"
+							},
+							"FileName": {
+								"value": "@coalesce(null)",
+								"type": "Expression"
+							},
+							"StorageAccountContainerName": {
+								"value": "@pipeline().parameters.StorageAccountContainerName",
+								"type": "Expression"
+							}
+						}
+					},
+					"fieldList": [
+						"childItems"
+					],
+					"storeSettings": {
+						"type": "AzureBlobFSReadSettings",
+						"recursive": true,
+						"enablePartitionDiscovery": false
+					},
+					"formatSettings": {
+						"type": "BinaryReadSettings"
+					}
+				}
+			},
+			{
+				"name": "ForEach Source Folder",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "Get List of Sources",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('Get List Of Sources').output.childItems",
+						"type": "Expression"
+					},
+					"isSequential": false,
+					"activities": [
+						{
+							"name": "For Each Table",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "2 For Each Table",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": false,
+								"parameters": {
+									"SourceFolderPath": {
+										"value": "@{item().name}",
+										"type": "Expression"
+									},
+									"DatabaseName": {
+										"value": "@pipeline().parameters.DatabaseName",
+										"type": "Expression"
+									},
+									"StorageAccountContainerName": {
+										"value": "@pipeline().parameters.StorageAccountContainerName",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"DatabaseName": {
+				"type": "string",
+				"defaultValue": "ws-ent-syn-serverlessdb-001"
+			},
+			"StorageAccountContainerName": {
+				"type": "string",
+				"defaultValue": "staging"
+			}
+		},
+		"folder": {
+			"name": "3 Automatically Create Views"
+		},
+		"annotations": []
+	}
+}

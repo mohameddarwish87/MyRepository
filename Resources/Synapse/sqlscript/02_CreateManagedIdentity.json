@@ -1,0 +1,20 @@
+{
+	"name": "02_CreateManagedIdentity",
+	"properties": {
+		"folder": {
+			"name": "ws-ent-syn-serverlessdb-001/Notification_DataMart"
+		},
+		"content": {
+			"query": "/*Use Notification_Datamart\ngo\nCREATE MASTER KEY ENCRYPTION BY PASSWORD='Pls enter the password here'\ngo\nCREATE DATABASE SCOPED CREDENTIAL ManagedIdentityCredential WITH IDENTITY = 'MANAGED SERVICE IDENTITY'\n*/\n",
+			"metadata": {
+				"language": "sql"
+			},
+			"currentConnection": {
+				"databaseName": "Notification_DataMart",
+				"poolName": "Built-in"
+			},
+			"resultLimit": 5000
+		},
+		"type": "SqlQuery"
+	}
+}

@@ -1,0 +1,11 @@
+{
+	"name": "managedPrivateEndpointAzureFunction",
+	"properties": {
+		"privateLinkResourceId": "/subscriptions/601d68db-bf92-4f84-ae2e-fe2d9e72cc15/resourceGroups/ws-ent-rg-dev-004/providers/Microsoft.Web/sites/ws-ent-functionapp-dmp-dev-004",
+		"groupId": "sites",
+		"fqdns": [
+			"ws-ent-functionapp-dmp-dev-004.azurewebsites.net",
+			"ws-ent-functionapp-dmp-dev-004.scm.azurewebsites.net"
+		]
+	}
+}

@@ -1,0 +1,20 @@
+{
+	"name": "dbo_SP_LoadDim_Contact",
+	"properties": {
+		"folder": {
+			"name": "ws-ent-syn-serverlessdb-001/StoredProcedure"
+		},
+		"content": {
+			"query": "/****** Object:  StoredProcedure [dbo].[SP_LoadDim_Contact]    Script Date: 12/22/2022 5:01:37 AM ******/\nSET ANSI_NULLS ON\nGO\n\nSET QUOTED_IDENTIFIER ON\nGO\n\n\nCREATE OR ALTER   PROCEDURE [dbo].[SP_LoadDim_Contact]\n( \n@GetNewWaterMark bit=0,@RowValidFrom Datetime2(7)='1900-01-01 00:00:00.0000000'\n)\nAS\nBegin \n\tIF @GetNewWaterMark>0\n\tBEGIN\n\tSELECT isnull(max(RowValidFrom),@RowValidFrom) AS RowValidFrom\n\t\t\tFROM [dbo].ws_typeofbreach A\n\t\t\tWHERE CAST(RowValidFrom As datetime2(7))>@RowValidFrom\n\tEND\n\tELSE\n\n\tWITH CTE as (\n\nselect\n contactid as\t\t[ContactID]\n,fullname as\t\t[FullName]\n,address1_city as\t[City]\n,address1_stateorprovince as [State]\n,adx_identity_lastsuccessfullogin as [LastSuccessfulLogin]\n,lastusedincampaign as [LastDateIncludedinCampaign]\n,adx_organizationname as [OrganizationName]\n,ws_company as [BusinessID]\n,b.localizedlabel        AS  [Status]\n,C.localizedlabel        AS  [StatusReason]\n,Convert(datetime2(0),convert(datetimeoffset,A.[modifiedon]) AT TIME ZONE 'New Zealand Standard Time') as [ModifiedDate]\n,Convert(datetime2(0),convert(datetimeoffset,A.[createdon]) AT TIME ZONE 'New Zealand Standard Time') as\t[CreatedDate]\n,A.createdbyname as\t\t[CreatedBy]\n,A.modifiedbyname\t\t[ModifiedBy]\n,ROW_number() OVER (partition by ID order by versionnumber desc) AS  Row_NUM\n,a.RowValidFrom,a.RowValidTo,a.RowIsCurrent  \nFROM [dbo].contact A\n       LEFT JOIN [dbo].[statemetadata] B\n              ON A.statecode = b.state\n                 AND b.entityname = 'contact'\n\t\t\t\t AND a.RowIsCurrent='true'\n       LEFT JOIN [dbo].statusmetadata C\n              ON A.statuscode = C.status\n\t\t\t  AND C.entityname = 'contact'\n\t\t\t  AND a.RowIsCurrent='true'\n\t\t\tWHERE CAST(a.RowValidFrom as datetime2(7)) > @RowValidFrom\n\t\t\t  )\n\nSELECT \n--ROW_NUMBER() OVER(ORDER BY [ContactID])+1000 AS ContactKey\n [ContactID]\n,[Status]\n,[StatusReason]\n,[FullName]\n,[City]\n,[State]\n,Convert(Varchar(20),[LastSuccessfulLogin]) as [LastSuccessfulLogin]\n,Convert(Varchar(20),[LastDateIncludedinCampaign]) as [LastDateIncludedinCampaign]\n,[OrganizationName]\n,[BusinessID]\n,COnvert(Varchar(20),[CreatedDate]) AS [CreatedDate]\n,COnvert(Varchar(20),[ModifiedDate]) AS [ModifiedDate]\n,[CreatedBy]\n,[ModifiedBy]\nFROM  CTE WHERE row_num=1 and [ContactID] is not null\n\nUNION  ALL\n\nSELECT \n\t\t'UNKNOWN',\n\t\tNull,\n\t\tNull,\n\t\tNull,\n\t\tNull,\n\t\tNull,\n\t\tNull,\n\t\tNull,\n\t\tNull,\n\t\tNull,\n\t\tNull,\n\t\tNull,\n\t\tNull,\n\t\tNull\n\n\tEND\nGO\n\n\n",
+			"metadata": {
+				"language": "sql"
+			},
+			"currentConnection": {
+				"databaseName": "wsentsynserverlessdb001",
+				"poolName": "Built-in"
+			},
+			"resultLimit": 5000
+		},
+		"type": "SqlQuery"
+	}
+}

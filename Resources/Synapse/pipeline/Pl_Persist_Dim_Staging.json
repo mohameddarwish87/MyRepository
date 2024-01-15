@@ -1,0 +1,614 @@
+{
+	"name": "Pl_Persist_Dim_Staging",
+	"properties": {
+		"activities": [
+			{
+				"name": "Get_Dim_SPs",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderQuery": "select sc.name +'.'+ pr.name as proc_name \nfrom sys.procedures pr \ninner join sys.schemas sc \non pr.schema_id = sc.schema_id \nwhere sc.name = 'dbo'\nand pr.name like '%LoadDim%' ",
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "AzureSynapseServerlessDatabase_Azure",
+						"type": "DatasetReference",
+						"parameters": {
+							"DBName": {
+								"value": "@pipeline().parameters.DBName",
+								"type": "Expression"
+							}
+						}
+					},
+					"firstRowOnly": false
+				}
+			},
+			{
+				"name": "ForEachSP",
+				"description": "BUG: This queries the proc twice (YUCK). Worked around it by adding a second result set that is much faster when a flag is set as a parameter. Check out my _inc SP\n\n\n\nNote that jobs are failing as RowValidFrom column is not coming through from the stored proc in staging. This is not the major problem with this approach.\n\n\nSome Jobs also failing because @GetNewWaterMark  param is not added to all SP's - only sp_LoadFact_VendorPayments_Inc]",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "Get_Dim_SPs",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('Get_Dim_SPs').output.value",
+						"type": "Expression"
+					},
+					"isSequential": false,
+					"activities": [
+						{
+							"name": "Lookup NewWaterMark Staging Watermark",
+							"description": "BUG: \n\nThis does not return the record with the latest RowValidFrom.\nThis means the If statement can have false positives and re-upsert the same information again as it uses the FirstRow reference.",
+							"type": "Lookup",
+							"dependsOn": [
+								{
+									"activity": "Lookup OldWatermark Metadata",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "SqlDWSource",
+									"sqlReaderStoredProcedureName": {
+										"value": "@item().proc_name",
+										"type": "Expression"
+									},
+									"storedProcedureParameters": {
+										"RowValidFrom": {
+											"value": {
+												"value": "@activity('Lookup OldWatermark Metadata').output.ADFWebActivityResponseHeaders['x-ms-meta-lastwatermark']\n",
+												"type": "Expression"
+											}
+										},
+										"GetNewWaterMark": {
+											"type": "Boolean",
+											"value": {
+												"value": "@bool(1)",
+												"type": "Expression"
+											}
+										}
+									},
+									"queryTimeout": "02:00:00",
+									"partitionOption": "None"
+								},
+								"dataset": {
+									"referenceName": "AzureSynapseServerlessDatabase_Azure",
+									"type": "DatasetReference",
+									"parameters": {
+										"DBName": {
+											"value": "@pipeline().parameters.DBName",
+											"type": "Expression"
+										}
+									}
+								}
+							}
+						},
+						{
+							"name": "Lookup OldWatermark Metadata",
+							"type": "WebActivity",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"url": {
+									"value": "@concat(variables('DataLakeBlobStorageURL'),'/',pipeline().parameters.StorageAccountContainerName,'/',pipeline().parameters.MainCuratedFolder,'/',substring(item().proc_name,11,sub(length(item().proc_name),11)))",
+									"type": "Expression"
+								},
+								"connectVia": {
+									"referenceName": "AutoResolveIntegrationRuntime",
+									"type": "IntegrationRuntimeReference"
+								},
+								"method": "GET",
+								"headers": {
+									"x-ms-version": "2020-10-02"
+								},
+								"authentication": {
+									"type": "MSI",
+									"resource": "https://storage.azure.com/"
+								}
+							}
+						},
+						{
+							"name": "NewWatermark matches LastWatermark",
+							"description": "Checks whether NewWatermark (from source) matches LastWatermark metadata on folder. If true, this means that there is no new data to ingest and the copy does not need to run",
+							"type": "IfCondition",
+							"dependsOn": [
+								{
+									"activity": "Lookup NewWaterMark Staging Watermark",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"expression": {
+									"value": "@equals(string(activity('Lookup NewWaterMark Staging Watermark').output.firstRow.RowValidFrom),string(activity('Lookup OldWatermark Metadata').output.ADFWebActivityResponseHeaders['x-ms-meta-lastwatermark']))",
+									"type": "Expression"
+								},
+								"ifFalseActivities": [
+									{
+										"name": "Create_Dim_Files_Landing",
+										"type": "Copy",
+										"dependsOn": [],
+										"policy": {
+											"timeout": "7.00:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"source": {
+												"type": "SqlDWSource",
+												"sqlReaderStoredProcedureName": {
+													"value": "@item().proc_name",
+													"type": "Expression"
+												},
+												"storedProcedureParameters": {
+													"RowValidFrom": {
+														"type": "Datetime",
+														"value": {
+															"value": "@activity('Lookup OldWatermark Metadata').output.ADFWebActivityResponseHeaders['x-ms-meta-lastwatermark']",
+															"type": "Expression"
+														}
+													}
+												},
+												"queryTimeout": "02:00:00",
+												"partitionOption": "None"
+											},
+											"sink": {
+												"type": "ParquetSink",
+												"storeSettings": {
+													"type": "AzureBlobFSWriteSettings"
+												},
+												"formatSettings": {
+													"type": "ParquetWriteSettings"
+												}
+											},
+											"enableStaging": false,
+											"translator": {
+												"type": "TabularTranslator",
+												"typeConversion": true,
+												"typeConversionSettings": {
+													"allowDataTruncation": true,
+													"treatBooleanAsNumber": false
+												}
+											}
+										},
+										"inputs": [
+											{
+												"referenceName": "AzureSynapseServerlessDatabase_Azure",
+												"type": "DatasetReference",
+												"parameters": {
+													"DBName": {
+														"value": "@pipeline().parameters.DBName",
+														"type": "Expression"
+													}
+												}
+											}
+										],
+										"outputs": [
+											{
+												"referenceName": "AzureBlobStorage_Parquet_Azure",
+												"type": "DatasetReference",
+												"parameters": {
+													"FileName": {
+														"value": "@concat(substring(item().proc_name,11,sub(length(item().proc_name),11)),'_',utcNow(),'.parquet')\n\n",
+														"type": "Expression"
+													},
+													"RelativePath": {
+														"value": "@concat(pipeline().parameters.MainCuratedFolder,'/',substring(item().proc_name,11,sub(length(item().proc_name),11)))",
+														"type": "Expression"
+													},
+													"StorageAccountContainerName": "datalakelanding"
+												}
+											}
+										]
+									}
+								]
+							}
+						},
+						{
+							"name": "Get Folder Metadata",
+							"type": "WebActivity",
+							"dependsOn": [
+								{
+									"activity": "Lookup OldWaterMark Curated Watermark",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"url": {
+									"value": "@concat(variables('DataLakeBlobStorageURL'),'/',pipeline().parameters.StorageAccountContainerName,'/',pipeline().parameters.MainCuratedFolder,'/',substring(item().proc_name,11,sub(length(item().proc_name),11)))",
+									"type": "Expression"
+								},
+								"connectVia": {
+									"referenceName": "AutoResolveIntegrationRuntime",
+									"type": "IntegrationRuntimeReference"
+								},
+								"method": "GET",
+								"headers": {
+									"x-ms-version": "2020-10-02"
+								},
+								"authentication": {
+									"type": "MSI",
+									"resource": "https://storage.azure.com/"
+								}
+							}
+						},
+						{
+							"name": "Set lastwatermark",
+							"type": "WebActivity",
+							"dependsOn": [
+								{
+									"activity": "Get Folder Metadata",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"url": {
+									"value": "@concat(variables('DataLakeBlobStorageURL'),'/',pipeline().parameters.StorageAccountContainerName,'/',pipeline().parameters.MainCuratedFolder,'/',substring(item().proc_name,11,sub(length(item().proc_name),11)),'?comp=metadata')",
+									"type": "Expression"
+								},
+								"connectVia": {
+									"referenceName": "AutoResolveIntegrationRuntime",
+									"type": "IntegrationRuntimeReference"
+								},
+								"method": "PUT",
+								"headers": {
+									"x-ms-version": "2020-10-02",
+									"x-ms-blob-type": "BlockBlob",
+									"x-ms-meta-businesskey1": {
+										"value": "@activity('Get Folder Metadata').output.ADFWebActivityResponseHeaders['x-ms-meta-businesskey1']",
+										"type": "Expression"
+									},
+									"x-ms-meta-businesskey2": {
+										"value": "@activity('Get Folder Metadata').output.ADFWebActivityResponseHeaders['x-ms-meta-businesskey2']",
+										"type": "Expression"
+									},
+									"x-ms-meta-businesskey3": {
+										"value": "@activity('Get Folder Metadata').output.ADFWebActivityResponseHeaders['x-ms-meta-businesskey3']",
+										"type": "Expression"
+									},
+									"x-ms-meta-businesskey4": {
+										"value": "@activity('Get Folder Metadata').output.ADFWebActivityResponseHeaders['x-ms-meta-businesskey4']",
+										"type": "Expression"
+									},
+									"x-ms-meta-businesskey5": {
+										"value": "@activity('Get Folder Metadata').output.ADFWebActivityResponseHeaders['x-ms-meta-businesskey5']",
+										"type": "Expression"
+									},
+									"x-ms-meta-businesskey6": {
+										"value": "@activity('Get Folder Metadata').output.ADFWebActivityResponseHeaders['x-ms-meta-businesskey6']",
+										"type": "Expression"
+									},
+									"x-ms-meta-businesskey7": {
+										"value": "@activity('Get Folder Metadata').output.ADFWebActivityResponseHeaders['x-ms-meta-businesskey7']",
+										"type": "Expression"
+									},
+									"x-ms-meta-datepartitionpath": {
+										"value": "@activity('Get Folder Metadata').output.ADFWebActivityResponseHeaders['x-ms-meta-datepartitionpath']",
+										"type": "Expression"
+									},
+									"x-ms-meta-explorationzonepath": {
+										"value": "@activity('Get Folder Metadata').output.ADFWebActivityResponseHeaders['x-ms-meta-explorationzonepath']",
+										"type": "Expression"
+									},
+									"x-ms-meta-lastwatermark": {
+										"value": "@activity('Lookup OldWaterMark Curated Watermark').output.firstRow.OldWaterMark",
+										"type": "Expression"
+									},
+									"x-ms-meta-partitionkey": {
+										"value": "@activity('Get Folder Metadata').output.ADFWebActivityResponseHeaders['x-ms-meta-partitionkey']",
+										"type": "Expression"
+									},
+									"x-ms-meta-pushtocuratedzone": {
+										"value": "@activity('Get Folder Metadata').output.ADFWebActivityResponseHeaders['x-ms-meta-pushtocuratedzone']",
+										"type": "Expression"
+									},
+									"x-ms-meta-pushtodw": {
+										"value": "@activity('Get Folder Metadata').output.ADFWebActivityResponseHeaders['x-ms-meta-pushtodw']",
+										"type": "Expression"
+									},
+									"x-ms-meta-pushtoexplorationzone": {
+										"value": "@activity('Get Folder Metadata').output.ADFWebActivityResponseHeaders['x-ms-meta-pushtoexplorationzone']",
+										"type": "Expression"
+									},
+									"x-ms-meta-pushtostagingzone": {
+										"value": "@activity('Get Folder Metadata').output.ADFWebActivityResponseHeaders['x-ms-meta-pushtostagingzone']",
+										"type": "Expression"
+									},
+									"x-ms-meta-scd2flag": {
+										"value": "@activity('Get Folder Metadata').output.ADFWebActivityResponseHeaders['x-ms-meta-scd2flag']",
+										"type": "Expression"
+									},
+									"x-ms-meta-upsert": {
+										"value": "@activity('Get Folder Metadata').output.ADFWebActivityResponseHeaders['x-ms-meta-upsert']",
+										"type": "Expression"
+									},
+									"x-ms-meta-watermarkcol": {
+										"value": "@activity('Get Folder Metadata').output.ADFWebActivityResponseHeaders['x-ms-meta-watermarkcol']",
+										"type": "Expression"
+									}
+								},
+								"body": ".",
+								"authentication": {
+									"type": "MSI",
+									"resource": "https://storage.azure.com/"
+								}
+							}
+						},
+						{
+							"name": "Lookup OldWaterMark Curated Watermark",
+							"description": "",
+							"type": "Lookup",
+							"dependsOn": [
+								{
+									"activity": "NewWatermark matches LastWatermark",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "SqlDWSource",
+									"sqlReaderQuery": {
+										"value": "@concat('IF EXISTS(SELECT COLUMN_NAME From INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = ''',concat(substring(item().proc_name,11,sub(length(item().proc_name),11))),''' AND  COLUMN_NAME = ''RowValidFrom'')\nBEGIN\nSELECT ISNULL(MAX(RowValidFrom),''1900-01-01'') as OldWaterMark FROM [dbo].[',concat(substring(item().proc_name,11,sub(length(item().proc_name),11))),']\nEND \nELSE\nSELECT ''1900-01-01'' as OldWaterMark --Boundary Case where there is no table in the curated DB or the RowValidFrom column does not exist.')",
+										"type": "Expression"
+									},
+									"queryTimeout": "02:00:00",
+									"partitionOption": "None"
+								},
+								"dataset": {
+									"referenceName": "AzureSynapseServerlessDatabase_Azure",
+									"type": "DatasetReference",
+									"parameters": {
+										"DBName": {
+											"value": "@pipeline().parameters.MainCuratedFolder",
+											"type": "Expression"
+										}
+									}
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "ForEachSP_old_Attempt1_refOnly",
+				"description": "BUG: This creates a blank file in the landing / raw zones which is undesirable and triggers MDF spark upsert unessecarily.\n\nAlso its not good how it doesnt use watermark metadata.\nbut it is efficient as it only executes the transforms once.",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "Get_Dim_SPs",
+						"dependencyConditions": [
+							"Skipped"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('Get_Dim_SPs').output.value",
+						"type": "Expression"
+					},
+					"activities": [
+						{
+							"name": "Create_Fact_Files_Landing_old",
+							"type": "Copy",
+							"dependsOn": [
+								{
+									"activity": "Lookup OldWaterMark Curated Watermark_old",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "SqlDWSource",
+									"sqlReaderStoredProcedureName": {
+										"value": "@item().proc_name",
+										"type": "Expression"
+									},
+									"storedProcedureParameters": {
+										"RowValidFrom": {
+											"type": "Datetime",
+											"value": {
+												"value": "@activity('Lookup OldWaterMark Curated Watermark_old').output.firstRow.OldWaterMark",
+												"type": "Expression"
+											}
+										}
+									},
+									"queryTimeout": "02:00:00",
+									"partitionOption": "None"
+								},
+								"sink": {
+									"type": "ParquetSink",
+									"storeSettings": {
+										"type": "AzureBlobFSWriteSettings"
+									},
+									"formatSettings": {
+										"type": "ParquetWriteSettings"
+									}
+								},
+								"enableStaging": false,
+								"translator": {
+									"type": "TabularTranslator",
+									"typeConversion": true,
+									"typeConversionSettings": {
+										"allowDataTruncation": true,
+										"treatBooleanAsNumber": false
+									}
+								}
+							},
+							"inputs": [
+								{
+									"referenceName": "AzureSynapseServerlessDatabase_Azure",
+									"type": "DatasetReference",
+									"parameters": {
+										"DBName": {
+											"value": "@pipeline().parameters.DBName",
+											"type": "Expression"
+										}
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "AzureBlobStorage_Parquet_Azure",
+									"type": "DatasetReference",
+									"parameters": {
+										"FileName": {
+											"value": "@concat(substring(item().proc_name,11,sub(length(item().proc_name),11)),'_',utcnow(),'.parquet')\n\n\n",
+											"type": "Expression"
+										},
+										"RelativePath": {
+											"value": "@concat(pipeline().parameters.MainCuratedFolder,'/',substring(item().proc_name,11,sub(length(item().proc_name),11)))",
+											"type": "Expression"
+										},
+										"StorageAccountContainerName": "datalakelanding"
+									}
+								}
+							]
+						},
+						{
+							"name": "Lookup OldWaterMark Curated Watermark_old",
+							"description": "",
+							"type": "Lookup",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "SqlDWSource",
+									"sqlReaderQuery": {
+										"value": "@concat('IF EXISTS(SELECT COLUMN_NAME From INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = ''',concat(substring(item().proc_name,11,sub(length(item().proc_name),11))),''' AND  COLUMN_NAME = ''RowValidFrom'')\nBEGIN\nSELECT ISNULL(MAX(RowValidFrom),''1900-01-01'') as OldWaterMark FROM [dbo].[',concat(substring(item().proc_name,11,sub(length(item().proc_name),11))),']\nEND \nELSE\nSELECT ''1900-01-01'' as OldWaterMark --Boundary Case where there is no table in the curated DB or the RowValidFrom column does not exist.')",
+										"type": "Expression"
+									},
+									"queryTimeout": "02:00:00",
+									"partitionOption": "None"
+								},
+								"dataset": {
+									"referenceName": "AzureSynapseServerlessDatabase_Azure",
+									"type": "DatasetReference",
+									"parameters": {
+										"DBName": {
+											"value": "@pipeline().parameters.MainCuratedFolder",
+											"type": "Expression"
+										}
+									}
+								}
+							}
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"MainCuratedFolder": {
+				"type": "string",
+				"defaultValue": "Notification_DataMart"
+			},
+			"DBName": {
+				"type": "string",
+				"defaultValue": "ws-ent-syn-serverlessdb-001"
+			},
+			"StorageAccountContainerName": {
+				"type": "string",
+				"defaultValue": "landing"
+			}
+		},
+		"variables": {
+			"DataLakeBlobStorageURL": {
+				"type": "String",
+				"defaultValue": "https://wsentdatalakedev002.blob.core.windows.net/"
+			}
+		},
+		"folder": {
+			"name": "ZZ Pl Template/3 Persist Staging Output to Curated Zone/Pl_Child"
+		},
+		"annotations": [],
+		"lastPublishTime": "2022-10-05T03:05:08Z"
+	},
+	"type": "Microsoft.Synapse/workspaces/pipelines"
+}

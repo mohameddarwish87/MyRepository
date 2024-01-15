@@ -1,0 +1,7 @@
+{
+	"name": "AzureSynapseAnalytics_DataverseDev",
+	"properties": {
+		"privateLinkResourceId": "/subscriptions/601d68db-bf92-4f84-ae2e-fe2d9e72cc15/resourceGroups/ws-ent-rg-dev-004/providers/Microsoft.Synapse/workspaces/ws-ent-syn-dmplz-dev-004",
+		"groupId": "sqlOnDemand"
+	}
+}

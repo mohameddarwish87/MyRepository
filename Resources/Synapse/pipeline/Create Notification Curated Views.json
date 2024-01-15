@@ -1,0 +1,68 @@
+{
+	"name": "Create Notification Curated Views",
+	"properties": {
+		"activities": [
+			{
+				"name": "Create Pipelines",
+				"type": "ExecutePipeline",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "2 For Each Table",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"SourceFolderPath": {
+							"value": "@pipeline().parameters.SourceFolderPath",
+							"type": "Expression"
+						},
+						"DatabaseName": {
+							"value": "@pipeline().parameters.DataMart_DBName",
+							"type": "Expression"
+						},
+						"StorageAccountContainerName": {
+							"value": "@pipeline().parameters.StorageContainerName",
+							"type": "Expression"
+						},
+						"ServerName": {
+							"value": "@pipeline().parameters.ServerName",
+							"type": "Expression"
+						},
+						"SchemaName": {
+							"value": "@pipeline().parameters.DataMart_SchemaName",
+							"type": "Expression"
+						}
+					}
+				}
+			}
+		],
+		"parameters": {
+			"SourceFolderPath": {
+				"type": "string",
+				"defaultValue": "Notification_DataMart"
+			},
+			"DataMart_DBName": {
+				"type": "string",
+				"defaultValue": "Notification_DataMart"
+			},
+			"StorageContainerName": {
+				"type": "string",
+				"defaultValue": "curated"
+			},
+			"ServerName": {
+				"type": "string",
+				"defaultValue": "ws-ent-syn-dmp-dev-004-ondemand.sql.azuresynapse.net"
+			},
+			"DataMart_SchemaName": {
+				"type": "string",
+				"defaultValue": "Notification"
+			}
+		},
+		"folder": {
+			"name": "Notification_DataMart/Auto Create Curated Views"
+		},
+		"annotations": []
+	}
+}

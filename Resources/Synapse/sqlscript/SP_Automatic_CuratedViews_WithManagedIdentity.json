@@ -1,0 +1,20 @@
+{
+	"name": "SP_Automatic_CuratedViews_WithManagedIdentity",
+	"properties": {
+		"folder": {
+			"name": "ws-ent-syn-serverlessdb-001/StoredProcedure"
+		},
+		"content": {
+			"query": "/****** Object:  StoredProcedure [dbo].[SP_Automatic_CuratedViews_WithManagedIdentity]    Script Date: 12/19/2022 9:21:26 PM ******/\nSET ANSI_NULLS ON\nGO\n\nSET QUOTED_IDENTIFIER ON\nGO\n\n\n\n\n\nCREATE OR ALTER        PROCEDURE [dbo].[SP_Automatic_CuratedViews_WithManagedIdentity]\n(\n    @Table_Name varchar(200),\n\t@ADLS_Folder Varchar(200),\n\t@Schema_Name varchar(50)='dbo'\n\t--execute [dbo].[SP_Automatic_Views] 'account','DataverseUAT'\n)\nAS\nBEGIN\n  SET NOCOUNT ON\n  \nBegin\n\n\tDeclare @SQLQuery NVARCHAR(MAX)=''\n\tdeclare @tbl_name varchar(200)\n\n\t\n\tSET @SQLQuery =\t'CREATE OR ALTER VIEW  ' + @Schema_Name+'.'+@Table_Name +' as\n   SELECT \n  *\n   FROM\n\n       OPENROWSET (\n\t        BULK '+ '''/'+@ADLS_Folder+'/dbo_'+@Table_Name+'/*.parquet'',\n\t\t  DATA_SOURCE = ''dls-curated-ManagedIdentity'',\n\t\t  FORMAT = ''DELTA''\n\t\t  ) AS [result]'\nprint  (@SQLQuery)\nEND\nEND\nGO\n\n\n",
+			"metadata": {
+				"language": "sql"
+			},
+			"currentConnection": {
+				"databaseName": "ws-ent-syn-serverlessdb-001",
+				"poolName": "Built-in"
+			},
+			"resultLimit": 5000
+		},
+		"type": "SqlQuery"
+	}
+}

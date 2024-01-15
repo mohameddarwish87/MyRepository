@@ -1,0 +1,125 @@
+{
+	"name": "3 Create Automatic Views",
+	"properties": {
+		"activities": [
+			{
+				"name": "Create Views for Incremental Load _scripto",
+				"description": " if storage account file path is date partitioned:\nBULK \n'@{variables('DataLakeStorageBlobURL')}/@{pipeline().parameters.PathFolderName}/@{pipeline().parameters.PathFolderName}/@{pipeline().parameters.TableSchema}_@{pipeline().parameters.TableName}/*/*/*/*.parquet',\n",
+				"type": "Script",
+				"dependsOn": [
+					{
+						"activity": "Check if Schema Exists",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"linkedServiceName": {
+					"referenceName": "Azure_Synapse_Serverless_WorkspaceDefaultSqlServer",
+					"type": "LinkedServiceReference",
+					"parameters": {
+						"DBName": {
+							"value": "@pipeline().parameters.DatabaseName",
+							"type": "Expression"
+						},
+						"ServerName": {
+							"value": "@pipeline().parameters.ServerName",
+							"type": "Expression"
+						}
+					}
+				},
+				"typeProperties": {
+					"scripts": [
+						{
+							"type": "Query",
+							"text": {
+								"value": "@concat('CREATE OR ALTER VIEW [',pipeline().parameters.TableSchema,'].[',replace(pipeline().parameters.TableName,'dbo_',''),']',' AS \nSELECT * FROM \n    OPENROWSET(\n        BULK ''',variables('DataLakeStorageBlobURL'),pipeline().parameters.StorageAccountContainerName,'/',pipeline().parameters.PathFolderName,'/',pipeline().parameters.TableName,'/',\n        ''',FORMAT = ''DELTA''\n    ) AS [result]')",
+								"type": "Expression"
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "Check if Schema Exists",
+				"type": "Script",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"linkedServiceName": {
+					"referenceName": "Azure_Synapse_Serverless_WorkspaceDefaultSqlServer",
+					"type": "LinkedServiceReference",
+					"parameters": {
+						"DBName": {
+							"value": "@pipeline().parameters.DatabaseName",
+							"type": "Expression"
+						},
+						"ServerName": {
+							"value": "@pipeline().parameters.ServerName",
+							"type": "Expression"
+						}
+					}
+				},
+				"typeProperties": {
+					"scripts": [
+						{
+							"type": "Query",
+							"text": {
+								"value": "IF NOT EXISTS (SELECT * FROM sys.schemas WHERE name = '@{pipeline().parameters.TableSchema}')\nBEGIN\nEXEC('CREATE SCHEMA [@{pipeline().parameters.TableSchema}]')\nEND",
+								"type": "Expression"
+							}
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"DatabaseName": {
+				"type": "string"
+			},
+			"PathFolderName": {
+				"type": "string"
+			},
+			"TableSchema": {
+				"type": "string"
+			},
+			"TableName": {
+				"type": "string"
+			},
+			"StorageAccountContainerName": {
+				"type": "string"
+			},
+			"ServerName": {
+				"type": "string"
+			}
+		},
+		"variables": {
+			"DateTimePath": {
+				"type": "String",
+				"defaultValue": "@{convertTimeZone(utcnow(),'UTC','New Zealand Standard Time','yyyy')}/@{convertTimeZone(utcnow(),'UTC','New Zealand Standard Time','MM')}/@{convertTimeZone(utcnow(),'UTC','New Zealand Standard Time','dd')}"
+			},
+			"DataLakeStorageBlobURL": {
+				"type": "String",
+				"defaultValue": "https://wsentstdatalakedmpdev004.dfs.core.windows.net/"
+			}
+		},
+		"folder": {
+			"name": "3 Automatically Create Views"
+		},
+		"annotations": []
+	}
+}
